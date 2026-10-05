@@ -396,7 +396,8 @@ export class HandVisualizer3D {
         worldPoints[i] = wp;
         if (this.bodyRig.jointMeshes[i]) {
           this.bodyRig.jointMeshes[i].position.copy(wp);
-          this.bodyRig.jointMeshes[i].visible = (lm.visibility === undefined || lm.visibility > 0.4);
+          const isMinorFacialPoint = (i >= 1 && i <= 10);
+          this.bodyRig.jointMeshes[i].visible = !isMinorFacialPoint && (lm.visibility === undefined || lm.visibility > 0.4);
         }
       }
     }

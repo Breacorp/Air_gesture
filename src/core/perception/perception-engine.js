@@ -110,6 +110,7 @@ export class PerceptionEngine {
     this.bodyTracker.mirror = val;
     this.faceTracker.mirror = val;
     this.objectTracker.mirror = val;
+    this.genericObjectTracker.mirror = val;
   }
 
   get swapHands() {

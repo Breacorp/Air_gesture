@@ -10,6 +10,7 @@
 export class GenericObjectTracker {
   constructor(options = {}) {
     this.enabled = options.enabled !== undefined ? options.enabled : true;
+    this.mirror = options.mirror !== undefined ? options.mirror : true;
     this.procWidth = 160;
     this.procHeight = 120;
     this.canvas = typeof document !== 'undefined' ? document.createElement('canvas') : null;
@@ -22,14 +23,15 @@ export class GenericObjectTracker {
     this.lastDetection = null;
     this.track = {
       id: 'object-001',
-      status: 'ACTIVE',
+      status: 'LOST',
       position: { x: 0.5, y: 0.5, z: 0.5 },
       velocity: { vx: 0, vy: 0, vz: 0, speed: 0 },
       boundingBox: { minX: 0.45, minY: 0.45, maxX: 0.55, maxY: 0.55, width: 0.1, height: 0.1 },
-      confidence: 0.85,
-      framesMissing: 0,
-      subType: 'generic_object'
+      confidence: 0,
+      framesMissing: 999,
+      subType: 'in_hand_object'
     };
+    this.hasActiveTrack = false;
   }
 
   enable() {
@@ -38,10 +40,16 @@ export class GenericObjectTracker {
 
   disable() {
     this.enabled = false;
+    this.hasActiveTrack = false;
+    this.track.status = 'LOST';
   }
 
   toggle() {
     this.enabled = !this.enabled;
+    if (!this.enabled) {
+      this.hasActiveTrack = false;
+      this.track.status = 'LOST';
+    }
     return this.enabled;
   }
 
@@ -139,63 +147,14 @@ export class GenericObjectTracker {
             width: (maxX - minX) / w,
             height: (maxY - minY) / h
           };
-          detectedConfidence = Math.min(0.95, 0.7 + (nonSkinCount / totalCount) * 0.25);
-          objectFound = true;
-        }
-      }
-
-      // Cue 2: Motion delta saliency if no object held in hand
-      if (!objectFound && this.prevFrameData) {
-        let diffXSum = 0;
-        let diffYSum = 0;
-        let diffCount = 0;
-        let bMinX = w, bMaxX = 0, bMinY = h, bMaxY = 0;
-
-        for (let i = 0; i < data.length; i += 16) {
-          const diff = Math.abs(data[i] - this.prevFrameData[i]) +
-                       Math.abs(data[i + 1] - this.prevFrameData[i + 1]) +
-                       Math.abs(data[i + 2] - this.prevFrameData[i + 2]);
-
-          if (diff > 45) {
-            const pixelIdx = i / 4;
-            const px = pixelIdx % w;
-            const py = Math.floor(pixelIdx / w);
-
-            // Ignore bottom 10% (often reflections or table edge)
-            if (py < h * 0.9) {
-              diffXSum += px;
-              diffYSum += py;
-              diffCount++;
-              if (px < bMinX) bMinX = px;
-              if (px > bMaxX) bMaxX = px;
-              if (py < bMinY) bMinY = py;
-              if (py > bMaxY) bMaxY = py;
-            }
-          }
-        }
-
-        // Motion blob with reasonable area (between 0.8% and 30% of frame)
-        const areaPct = diffCount / ((w * h) / 4);
-        if (areaPct > 0.008 && areaPct < 0.35 && bMaxX > bMinX) {
-          const cX = (diffXSum / diffCount) / w;
-          const cY = (diffYSum / diffCount) / h;
-          detectedCentroid = { x: cX, y: cY, z: 0.5 };
-          detectedBox = {
-            minX: bMinX / w,
-            minY: bMinY / h,
-            maxX: bMaxX / w,
-            maxY: bMaxY / h,
-            width: (bMaxX - bMinX) / w,
-            height: (bMaxY - bMinY) / h
-          };
-          detectedConfidence = 0.82;
+          detectedConfidence = Math.min(0.95, 0.72 + (nonSkinCount / totalCount) * 0.25);
           objectFound = true;
         }
       }
 
       this.prevFrameData = new Uint8Array(data);
 
-      // Update Track
+      // State Machine Update
       if (objectFound && detectedCentroid && detectedBox) {
         const dt = this.lastDetection ? Math.max(0.016, (timestamp - this.lastDetection.time) / 1000) : 0.033;
         const vx = (detectedCentroid.x - this.track.position.x) / dt;
@@ -212,11 +171,18 @@ export class GenericObjectTracker {
         this.track.framesMissing = 0;
         this.track.velocity = { vx, vy, vz: 0, speed: Math.hypot(vx, vy) };
 
+        this.hasActiveTrack = true;
         this.lastDetection = { time: timestamp, pos: { ...this.track.position } };
       } else {
+        if (!this.hasActiveTrack) {
+          // Never return a ghost object if no physical object was detected
+          return { count: 0, tracks: [], candidates: [] };
+        }
+
         this.track.framesMissing++;
-        if (this.track.framesMissing > 15) {
+        if (this.track.framesMissing > 6) {
           this.track.status = 'LOST';
+          this.hasActiveTrack = false;
           return { count: 0, tracks: [], candidates: [] };
         } else {
           this.track.status = 'COASTING';
@@ -247,7 +213,7 @@ export class GenericObjectTracker {
       };
     } catch (err) {
       console.warn('[GenericObjectTracker] Error detecting:', err);
-      return null;
+      return { count: 0, tracks: [], candidates: [] };
     }
   }
 }

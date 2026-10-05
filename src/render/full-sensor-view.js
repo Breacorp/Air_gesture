@@ -119,15 +119,15 @@ export class FullSensorView {
   }
 
   /**
-   * Projects normalized [0..1] camera coordinates to exact screen pixels
+   * Projects normalized [0..1] camera coordinates to exact screen pixels.
+   * Coordinates in SpatialWorldModel are already mirrored to match the screen display,
+   * so no additional horizontal flipping is applied.
    * @param {number} u Normalized X [0..1]
    * @param {number} v Normalized Y [0..1]
-   * @param {boolean} isMirrored If selfie camera reflection is active
    */
-  project(u, v, isMirrored = true) {
-    const rx = isMirrored ? (1.0 - u) : u;
+  project(u, v) {
     return {
-      x: this.videoRect.x + rx * this.videoRect.width,
+      x: this.videoRect.x + u * this.videoRect.width,
       y: this.videoRect.y + v * this.videoRect.height
     };
   }
@@ -143,46 +143,49 @@ export class FullSensorView {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    const isMirrored = true;
     const vr = this.videoRect;
 
     // 1. Draw Full Sensor Boundary Frame & Corner Rulers
     this._renderSensorFrame(ctx, vr);
 
-    // 2. Draw Full-Body Pose Skeleton (33 landmarks)
+    // 2. Check if dedicated FaceTracker entity is active
+    const face = data.worldModel?.getEntity('face-primary') || data.face;
+    const hasFace = Boolean(face && face.landmarks && face.landmarks.length > 0 && face.missingFrames === 0);
+
+    // 3. Draw Full-Body Pose Skeleton (33 landmarks)
+    // If hasFace is true, _renderBodyPose omits facial points 0..10 to prevent duplicate/conflicting face indicators
     const body = data.worldModel?.getEntity('body-primary') || data.body;
     if (body && body.landmarks && body.missingFrames === 0) {
-      this._renderBodyPose(ctx, body.landmarks, isMirrored);
+      this._renderBodyPose(ctx, body.landmarks, hasFace);
     }
 
-    // 3. Draw Hands Skeletons (21 landmarks each)
+    // 4. Draw Hands Skeletons (21 landmarks each)
     const handsList = Array.isArray(data.hands)
       ? data.hands
       : (data.hands ? Object.values(data.hands).filter(Boolean) : []);
     for (const hand of handsList) {
       if (hand && hand.landmarks) {
-        this._renderHand(ctx, hand.landmarks, hand.handedness || 'Right', hand.pose || {}, isMirrored);
+        this._renderHand(ctx, hand.landmarks, hand.handedness || 'Right', hand.pose || {});
       }
     }
 
-    // 4. Draw Face Mesh / Head Pose
-    const face = data.worldModel?.getEntity('face-primary') || data.face;
-    if (face && face.landmarks && face.missingFrames === 0) {
-      this._renderFace(ctx, face, isMirrored);
+    // 5. Draw Face Mesh / Head Pose (Single authoritative face indicator)
+    if (hasFace) {
+      this._renderFace(ctx, face);
     }
 
-    // 5. Draw Tracked Physical Objects & Props
+    // 6. Draw Tracked Physical Objects & Props
     const objects = data.worldModel?.getEntitiesByType('object') || [];
     for (const obj of objects) {
       if (obj.missingFrames === 0) {
-        this._renderObject(ctx, obj, isMirrored);
+        this._renderObject(ctx, obj);
       }
     }
 
-    // 6. Draw Live Sensor Diagnostic Telemetry Banner
+    // 7. Draw Live Sensor Diagnostic Telemetry Banner
     this._renderSensorHUD(ctx, vr, data);
 
-    // 7. Draw AIR GESTURE - PERCEPTION DEBUG telemetry panel
+    // 8. Draw AIR GESTURE - PERCEPTION DEBUG telemetry panel
     this._renderPerceptionDebugBox(ctx, vr, data);
   }
 
@@ -236,18 +239,21 @@ export class FullSensorView {
     ctx.restore();
   }
 
-  _renderBodyPose(ctx, landmarks, isMirrored) {
+  _renderBodyPose(ctx, landmarks, hasFace = false) {
     ctx.save();
 
-    // Draw Bones
+    // Draw Bones (skip facial connections 0..10 if dedicated FaceTracker is rendering)
     ctx.strokeStyle = '#ffd166';
     ctx.lineWidth = 3;
     for (const [aIdx, bIdx] of POSE_CONNECTIONS) {
+      if (hasFace && (aIdx < 11 || bIdx < 11)) {
+        continue; // Prevent duplicate facial connections when FaceTracker reticle is active
+      }
       const a = landmarks[aIdx];
       const b = landmarks[bIdx];
       if (a && b && (a.visibility === undefined || a.visibility > 0.4) && (b.visibility === undefined || b.visibility > 0.4)) {
-        const pa = this.project(a.x, a.y, isMirrored);
-        const pb = this.project(b.x, b.y, isMirrored);
+        const pa = this.project(a.x, a.y);
+        const pb = this.project(b.x, b.y);
         ctx.beginPath();
         ctx.moveTo(pa.x, pa.y);
         ctx.lineTo(pb.x, pb.y);
@@ -255,12 +261,13 @@ export class FullSensorView {
       }
     }
 
-    // Draw Joints
-    for (let i = 0; i < landmarks.length; i++) {
+    // Draw Joints (skip facial joints 0..10 if dedicated FaceTracker is rendering)
+    const startIdx = hasFace ? 11 : 0;
+    for (let i = startIdx; i < landmarks.length; i++) {
       const lm = landmarks[i];
       if (lm && (lm.visibility === undefined || lm.visibility > 0.4)) {
-        const p = this.project(lm.x, lm.y, isMirrored);
-        ctx.fillStyle = i >= 23 ? '#00f5d4' : '#ff007f'; // Legs cyan, Torso/Head magenta
+        const p = this.project(lm.x, lm.y);
+        ctx.fillStyle = i >= 23 ? '#00f5d4' : '#ff007f'; // Legs cyan, Torso magenta
         ctx.beginPath();
         ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
         ctx.fill();
@@ -270,7 +277,7 @@ export class FullSensorView {
     ctx.restore();
   }
 
-  _renderHand(ctx, landmarks, handedness = 'Right', pose = {}, isMirrored) {
+  _renderHand(ctx, landmarks, handedness = 'Right', pose = {}) {
     ctx.save();
     const isRight = handedness.toLowerCase() === 'right';
     const mainColor = isRight ? '#00f5d4' : '#ff007f';
@@ -282,8 +289,8 @@ export class FullSensorView {
       const a = landmarks[aIdx];
       const b = landmarks[bIdx];
       if (a && b) {
-        const pa = this.project(a.x, a.y, isMirrored);
-        const pb = this.project(b.x, b.y, isMirrored);
+        const pa = this.project(a.x, a.y);
+        const pb = this.project(b.x, b.y);
         ctx.beginPath();
         ctx.moveTo(pa.x, pa.y);
         ctx.lineTo(pb.x, pb.y);
@@ -294,7 +301,7 @@ export class FullSensorView {
     // Draw Hand Joints
     for (let i = 0; i < landmarks.length; i++) {
       const lm = landmarks[i];
-      const p = this.project(lm.x, lm.y, isMirrored);
+      const p = this.project(lm.x, lm.y);
       const isTip = [4, 8, 12, 16, 20].includes(i);
       ctx.fillStyle = isTip ? '#ffffff' : mainColor;
       ctx.beginPath();
@@ -304,7 +311,7 @@ export class FullSensorView {
 
     // Pinch Indicator
     if (pose.isPinchThumbIndex && landmarks[8]) {
-      const p = this.project(landmarks[8].x, landmarks[8].y, isMirrored);
+      const p = this.project(landmarks[8].x, landmarks[8].y);
       ctx.strokeStyle = '#ffd166';
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -315,37 +322,37 @@ export class FullSensorView {
     ctx.restore();
   }
 
-  _renderFace(ctx, face, isMirrored) {
+  _renderFace(ctx, face) {
     ctx.save();
     if (face.landmarks && face.landmarks.length > 0) {
       const nose = face.landmarks[1] || face.landmarks[0];
       if (nose) {
-        const p = this.project(nose.x, nose.y, isMirrored);
-        // Face Crosshair & Orientation
+        const p = this.project(nose.x, nose.y);
+        // Face Crosshair & Orientation (Pixel-perfect on user's face)
         ctx.strokeStyle = '#a100ff';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 16, 0, Math.PI * 2);
-        ctx.moveTo(p.x - 24, p.y);
-        ctx.lineTo(p.x + 24, p.y);
-        ctx.moveTo(p.x, p.y - 24);
-        ctx.lineTo(p.x, p.y + 24);
+        ctx.arc(p.x, p.y, 18, 0, Math.PI * 2);
+        ctx.moveTo(p.x - 26, p.y);
+        ctx.lineTo(p.x + 26, p.y);
+        ctx.moveTo(p.x, p.y - 26);
+        ctx.lineTo(p.x, p.y + 26);
         ctx.stroke();
 
-        ctx.font = '10px "JetBrains Mono", monospace';
+        ctx.font = 'bold 11px "JetBrains Mono", monospace';
         ctx.fillStyle = '#a100ff';
-        ctx.fillText(`FACE [${Math.round(face.rotation?.yaw || 0)}°, ${Math.round(face.rotation?.pitch || 0)}°]`, p.x + 28, p.y + 4);
+        ctx.fillText(`FACE [${Math.round(face.rotation?.yaw || 0)}°, ${Math.round(face.rotation?.pitch || 0)}°]`, p.x + 30, p.y + 4);
       }
     }
     ctx.restore();
   }
 
-  _renderObject(ctx, obj, isMirrored) {
+  _renderObject(ctx, obj) {
     ctx.save();
     const bbox = obj.boundingBox;
     if (bbox) {
-      const pMin = this.project(bbox.minX, bbox.minY, isMirrored);
-      const pMax = this.project(bbox.maxX, bbox.maxY, isMirrored);
+      const pMin = this.project(bbox.minX, bbox.minY);
+      const pMax = this.project(bbox.maxX, bbox.maxY);
 
       const left = Math.min(pMin.x, pMax.x);
       const top = Math.min(pMin.y, pMax.y);
@@ -367,8 +374,8 @@ export class FullSensorView {
 
       // Velocity Vector Arrow
       if (obj.velocity && obj.velocity.speed > 0.02) {
-        const center = this.project(obj.position.x, obj.position.y, isMirrored);
-        const vx = (isMirrored ? -obj.velocity.vx : obj.velocity.vx) * this.videoRect.width * 0.4;
+        const center = this.project(obj.position.x, obj.position.y);
+        const vx = obj.velocity.vx * this.videoRect.width * 0.4;
         const vy = obj.velocity.vy * this.videoRect.height * 0.4;
 
         ctx.strokeStyle = '#00f5d4';
