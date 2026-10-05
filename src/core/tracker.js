@@ -50,8 +50,24 @@ export class HandTracker {
     return this.engine.objectTracker;
   }
 
+  get faceTracker() {
+    return this.engine.faceTracker;
+  }
+
+  get digitalTwinManager() {
+    return this.engine.digitalTwinManager;
+  }
+
   async toggleBodyTracking() {
     return this.engine.toggleBodyTracking();
+  }
+
+  async toggleFaceTracking() {
+    return this.engine.toggleFaceTracking();
+  }
+
+  toggleDigitalTwin() {
+    return this.engine.toggleDigitalTwin();
   }
 
   toggleObjectTracking(preset) {

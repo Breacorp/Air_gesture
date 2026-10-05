@@ -1,12 +1,20 @@
 /**
- * PerceptionEngine - Master Sensory Dispatcher
- * Coordinates Camera/Video ingestion, runs active perception trackers (Hands, Body, Objects),
- * collects spatial candidate observations, and feeds them into the SpatialWorldModel.
+ * PerceptionEngine - Master Multimodal Sensory Dispatcher
+ * 
+ * Coordinates Camera/Video ingestion, runs active perception trackers:
+ * - Hands (HandLandmarker)
+ * - Body (PoseLandmarker)
+ * - Face (FaceLandmarker, Head pose, Gaze, Expressions)
+ * - Objects & Digital Twin (ObjectDetector, Segmenter, TrackingEngine, MultiViewReconstructor)
+ * 
+ * Ingests all candidate observations into the SpatialWorldModel.
  */
 
 import { HandTracker } from './hand-tracker.js';
 import { BodyTracker } from './body-tracker.js';
+import { FaceTracker } from './face-tracker.js';
 import { ObjectTracker } from './object-tracker.js';
+import { DigitalTwinManager } from './objects/digital-twin-manager.js';
 import { DepthEstimator } from './depth-estimator.js';
 import { SpatialWorldModel } from '../spatial/world-model.js';
 
@@ -20,12 +28,14 @@ export class PerceptionEngine {
     // Spatial World Model (Single Source of Truth)
     this.worldModel = options.worldModel || new SpatialWorldModel();
 
-    // Sensory Trackers
+    // Multimodal Sensory Trackers
     this.handTracker = new HandTracker({
       mirror: options.mirror !== undefined ? options.mirror : true,
       swapHands: options.swapHands || false
     });
     this.bodyTracker = new BodyTracker({ enabled: false });
+    this.faceTracker = new FaceTracker({ enabled: false });
+    this.digitalTwinManager = new DigitalTwinManager({ enabled: false });
     this.objectTracker = new ObjectTracker({ enabled: false });
     this.depthEstimator = new DepthEstimator({ enabled: false });
 
@@ -34,7 +44,10 @@ export class PerceptionEngine {
       fps: 0,
       frameTimeMs: 0,
       detectedHandsCount: 0,
-      activeEntitiesCount: 0
+      activeEntitiesCount: 0,
+      isFaceTrackingActive: false,
+      isBodyTrackingActive: false,
+      isDigitalTwinActive: false
     };
 
     this._fpsFrames = 0;
@@ -48,6 +61,7 @@ export class PerceptionEngine {
   set mirror(val) {
     this.handTracker.mirror = val;
     this.bodyTracker.mirror = val;
+    this.faceTracker.mirror = val;
     this.objectTracker.mirror = val;
   }
 
@@ -62,11 +76,31 @@ export class PerceptionEngine {
   async toggleBodyTracking() {
     if (this.bodyTracker.enabled) {
       this.bodyTracker.disable();
+      this.stats.isBodyTrackingActive = false;
       return false;
     } else {
       await this.bodyTracker.enable();
+      this.stats.isBodyTrackingActive = true;
       return true;
     }
+  }
+
+  async toggleFaceTracking() {
+    if (this.faceTracker.enabled) {
+      this.faceTracker.disable();
+      this.stats.isFaceTrackingActive = false;
+      return false;
+    } else {
+      await this.faceTracker.enable();
+      this.stats.isFaceTrackingActive = true;
+      return true;
+    }
+  }
+
+  toggleDigitalTwin() {
+    const active = this.digitalTwinManager.toggle();
+    this.stats.isDigitalTwinActive = active;
+    return active;
   }
 
   toggleObjectTracking(preset) {
@@ -81,12 +115,15 @@ export class PerceptionEngine {
   }
 
   /**
-   * Initializes all required WASM models
+   * Initializes active perception models
    */
   async initialize() {
     await this.handTracker.initialize();
     if (this.bodyTracker.enabled) {
       await this.bodyTracker.initialize();
+    }
+    if (this.faceTracker.enabled) {
+      await this.faceTracker.initialize();
     }
     return true;
   }
@@ -154,21 +191,23 @@ export class PerceptionEngine {
         this.lastVideoTime = this.videoElement.currentTime;
         const startTime = performance.now();
 
-        // 1. Run Active Perception Trackers
+        // 1. Run Active Multimodal Perception Trackers
         const allCandidates = [];
 
-        // A. Hand Tracking
+        // A. Hand Tracking (Core)
         const handResult = this.handTracker.detect(this.videoElement, now);
         let handsData = [];
+        let rawHandLandmarks = [];
         if (handResult) {
           handsData = handResult.hands;
+          rawHandLandmarks = handsData.map(h => h.landmarks);
           this.stats.detectedHandsCount = handResult.count;
           allCandidates.push(...handResult.candidates);
         } else {
           this.stats.detectedHandsCount = 0;
         }
 
-        // B. Body Tracking (if active)
+        // B. Body Tracking (Full-Body Pose)
         if (this.bodyTracker.enabled) {
           const bodyResult = this.bodyTracker.detect(this.videoElement, now);
           if (bodyResult && bodyResult.candidates) {
@@ -176,7 +215,23 @@ export class PerceptionEngine {
           }
         }
 
-        // C. Object / Prop Tracking (if active)
+        // C. Face Tracking (Head Pose, Gaze, Expressions)
+        if (this.faceTracker.enabled) {
+          const faceResult = this.faceTracker.detect(this.videoElement, now);
+          if (faceResult && faceResult.candidates) {
+            allCandidates.push(...faceResult.candidates);
+          }
+        }
+
+        // D. Digital Twin & Multi-View Object Reconstruction (Real -> Virtual)
+        if (this.digitalTwinManager.enabled) {
+          const dtResult = this.digitalTwinManager.processFrame(this.videoElement, rawHandLandmarks, now);
+          if (dtResult && dtResult.candidates) {
+            allCandidates.push(...dtResult.candidates);
+          }
+        }
+
+        // E. Auxiliary Fast Color Object Tracking
         if (this.objectTracker.enabled) {
           const objResult = this.objectTracker.detect(this.videoElement, now);
           if (objResult && objResult.candidates) {
@@ -184,13 +239,13 @@ export class PerceptionEngine {
           }
         }
 
-        // 2. Feed Observations to SpatialWorldModel (Single Source of Truth)
+        // 2. Feed All Observations to SpatialWorldModel (Single Source of Truth)
         this.worldModel.ingestObservations(allCandidates, now);
         this.stats.activeEntitiesCount = this.worldModel.getAllActiveEntities().length;
 
         this.stats.frameTimeMs = Math.round(performance.now() - startTime);
 
-        // 3. Dispatch to Consumers (maintains backwards compatibility for onFrameCallback)
+        // 3. Dispatch to Consumers
         if (this.onFrameCallback) {
           this.onFrameCallback({
             hands: handsData,
