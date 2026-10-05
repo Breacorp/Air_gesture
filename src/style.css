@@ -44,19 +44,22 @@ body, html {
   overflow: hidden;
 }
 
-/* Background Webcam Video for Passthrough AR */
+/* Background Webcam Video: 100% Unconstrained Sensor (Zero Crop, Native Aspect Ratio) */
 #webcam-video {
   position: absolute;
-  top: 0;
-  left: 0;
+  top: 50%;
+  left: 50%;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  transform: scaleX(-1); /* Default selfie mirror */
+  max-width: 100vw;
+  max-height: 100vh;
+  object-fit: contain; /* Full sensor view: preserves 16:9 / native camera bounds without crop */
+  transform: translate(-50%, -50%) scaleX(-1); /* Default selfie mirror centered */
   z-index: 1;
-  opacity: 0.38;
-  transition: opacity 0.4s ease;
-  filter: contrast(1.1) brightness(0.85);
+  opacity: 0.9;
+  transition: opacity 0.3s ease;
+  filter: contrast(1.05) brightness(0.95);
+  background-color: #030712;
 }
 
 #webcam-video.hidden-ar {
@@ -65,13 +68,13 @@ body, html {
 }
 
 #webcam-video.no-mirror {
-  transform: scaleX(1);
+  transform: translate(-50%, -50%) scaleX(1);
 }
 
 #ar-overlay-scrim {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, rgba(7, 10, 19, 0.4) 0%, rgba(7, 10, 19, 0.95) 100%);
+  background: rgba(3, 7, 18, 0.2); /* Transparent non-destructive backdrop */
   z-index: 2;
   pointer-events: none;
 }
@@ -89,6 +92,27 @@ body, html {
   height: 100% !important;
   display: block;
   pointer-events: none;
+}
+
+/* Full Sensor View 2D Overlay Canvas */
+#full-sensor-view-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 4;
+  pointer-events: none;
+}
+
+#full-sensor-view-canvas.hidden {
+  display: none !important;
+}
+
+.btn-sensor-view.active {
+  background: rgba(0, 245, 212, 0.2);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  box-shadow: 0 0 15px rgba(0, 245, 212, 0.4);
 }
 
 /* Glassmorphism Components */

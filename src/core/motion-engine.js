@@ -69,25 +69,10 @@ export class MotionEngine {
     // 1. Spatial Depth & Metric Scale Calibration
     const spatialMetrics = this.calibrator.computeSpatialMetrics(rawLandmarks, width, height);
 
-    // Exact Screen Projection with object-fit: cover compensation
-    const screenW = (typeof window !== 'undefined' && window.innerWidth) ? window.innerWidth : width;
-    const screenH = (typeof window !== 'undefined' && window.innerHeight) ? window.innerHeight : height;
-    const screenAspect = screenW / screenH;
-    const videoAspect = (width && height) ? (width / height) : (16 / 9);
-
-    let scaleX = 1.0;
-    let scaleY = 1.0;
-    if (screenAspect > videoAspect) {
-      // Screen is wider than video: video fits width, top/bottom are cropped
-      scaleY = screenAspect / videoAspect;
-    } else {
-      // Screen is taller than video: video fits height, left/right are cropped
-      scaleX = videoAspect / screenAspect;
-    }
-
+    // Unconstrained Full Sensor Projection (Zero Digital Zoom / Zero Crop)
     const screenPoints = rawLandmarks.map((lm) => ({
-      u: (lm.x - 0.5) * scaleX + 0.5,
-      v: (lm.y - 0.5) * scaleY + 0.5
+      u: lm.x,
+      v: lm.y
     }));
 
     // Convert raw landmarks into calibrated 3D Vector3 array with per-joint temporal stabilization

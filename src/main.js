@@ -30,6 +30,7 @@ import { AirPhysicsLab } from './physics/air-physics-lab.js';
 import { AirGameAPI } from './games/air-game-api.js';
 import { AirGamesLab } from './games/air-games-lab.js';
 import { gameAudio } from './games/air-game-audio.js';
+import { FullSensorView } from './render/full-sensor-view.js';
 
 // DOM References
 const videoEl = document.getElementById('webcam-video');
@@ -84,6 +85,9 @@ const airGameAPI = new AirGameAPI(tracker.worldModel, interactionEngine);
 const gamesCanvasContainer = document.getElementById('games-canvas-container');
 const gamesLab = new AirGamesLab(gamesCanvasContainer, airGameAPI);
 
+// Full Sensor View (100% unconstrained camera sensor passthrough with multi-entity rigs)
+const fullSensorView = new FullSensorView(videoEl, viewportEl);
+
 // Expose Spatial World Model globally for developer inspection
 window.__spatialWorld = tracker.worldModel;
 
@@ -121,6 +125,7 @@ window.__visualizer = visualizer;
 window.__perceptionTracker = tracker;
 window.__airGameAPI = airGameAPI;
 window.__gamesLab = gamesLab;
+window.__fullSensorView = fullSensorView;
 
 // When macOS daemon reports actual screen bounds, update interaction engine
 macosAdapter.onScreenResolution = (screen) => {
@@ -374,6 +379,15 @@ tracker.setOnFrame((frameData) => {
     airGameAPI.update(kinematicData, worldModel, now);
   }
 
+  // 9. Full Sensor View Rendering (Unconstrained Camera Sensor Overlays)
+  if (fullSensorView && fullSensorView.isEnabled) {
+    fullSensorView.render({
+      hands: kinematicData,
+      worldModel,
+      timestamp: now
+    });
+  }
+
   lastDetectedHands = currentFrameHands;
 });
 
@@ -494,6 +508,19 @@ if (btnSwapHands) {
     const label = document.getElementById('swap-hands-label');
     if (label) {
       label.textContent = tracker.swapHands ? 'Invertido (L/R)' : 'Swap L/R';
+    }
+  });
+}
+
+// Full Sensor View Toggle (100% Native Uncropped Camera Frame + Landmarker Overlays)
+const btnFullSensorView = document.getElementById('btn-full-sensor-view');
+const lblSensorView = document.getElementById('sensor-view-label');
+if (btnFullSensorView) {
+  btnFullSensorView.addEventListener('click', () => {
+    const active = fullSensorView.toggle();
+    btnFullSensorView.classList.toggle('active', active);
+    if (lblSensorView) {
+      lblSensorView.textContent = active ? 'Sensor: ON (16:9)' : 'Full Sensor View';
     }
   });
 }
