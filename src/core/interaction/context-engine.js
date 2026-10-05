@@ -4,10 +4,14 @@
  * "Air Gesture nunca debe aprender cómo funciona una aplicación.
  *  Air Gesture debe entender cómo funciona la interacción humana."
  * 
- * Inspects the current spatial world, active virtual layers, and relationships:
- * - What entities exist around the hands? (3D CAD model, physical prop, rigid body, UI button, OS surface)
- * - What are their active spatial relationships? (near, touching, holding, over)
+ * Evaluates the spatial environment around the interacting entities and
+ * identifies their intrinsic capabilities (grabbable, movable, scalable,
+ * rotatable, clickable, scrollable, throwable, physical, virtual).
  */
+
+import { TargetCapabilities } from './capabilities.js';
+
+export { TargetCapabilities };
 
 export const ContextTargetType = Object.freeze({
   VIRTUAL_3D_OBJECT: 'virtual_3d_object', // 3D Mesh / CAD model in scene
@@ -31,8 +35,9 @@ export class SpatialContext {
     this.targetType = options.targetType || ContextTargetType.OS_SURFACE;
     this.targetEntity = options.targetEntity || null;
     this.targetId = options.targetId || 'os_desktop';
+    this.capabilities = options.capabilities || TargetCapabilities.forOSSurface();
     this.relationship = options.relationship || SpatialRelationship.NONE;
-    this.environment = options.environment || 'desktop'; // 'studio' | 'physics' | 'desktop'
+    this.environment = options.environment || 'desktop'; // 'studio' | 'physics' | 'desktop' | 'physical_room'
     this.metadata = options.metadata || {};
     this.timestamp = options.timestamp || performance.now();
   }
@@ -55,7 +60,7 @@ export class SpatialContext {
   }
 
   toString() {
-    return `[SpatialContext target=${this.targetId} (${this.targetType}) rel=${this.relationship} env=${this.environment}]`;
+    return `[SpatialContext target=${this.targetId} rel=${this.relationship} env=${this.environment} caps=${this.capabilities}]`;
   }
 }
 
@@ -92,6 +97,7 @@ export class ContextEngine {
         targetType: this.activeHeldEntity.targetType,
         targetEntity: this.activeHeldEntity.targetEntity,
         targetId: this.activeHeldEntity.targetId,
+        capabilities: this.activeHeldEntity.capabilities,
         relationship: SpatialRelationship.HOLDING,
         environment: this.activeHeldEntity.environment,
         metadata: { heldSince: this.activeHeldEntity.heldSince },
@@ -106,6 +112,7 @@ export class ContextEngine {
           targetType: ContextTargetType.VIRTUAL_3D_OBJECT,
           targetEntity: this.studio.modelContainer,
           targetId: 'cad_model_root',
+          capabilities: TargetCapabilities.for3DVirtualModel(),
           relationship: this.studio.isGrabbing ? SpatialRelationship.HOLDING : SpatialRelationship.OVER,
           environment: 'studio',
           metadata: { studio: this.studio },
@@ -121,6 +128,7 @@ export class ContextEngine {
           targetType: ContextTargetType.PHYSICS_RIGID_BODY,
           targetEntity: this.physicsLab.grabbedBody,
           targetId: `physics_body_${this.physicsLab.grabbedBody.id || 'current'}`,
+          capabilities: TargetCapabilities.forPhysicsRigidBody(),
           relationship: SpatialRelationship.HOLDING,
           environment: 'physics',
           metadata: { physicsLab: this.physicsLab },
@@ -135,6 +143,7 @@ export class ContextEngine {
           targetType: ContextTargetType.PHYSICS_RIGID_BODY,
           targetEntity: nearestBody.body,
           targetId: `physics_body_${nearestBody.body.id || 'nearest'}`,
+          capabilities: TargetCapabilities.forPhysicsRigidBody(),
           relationship: nearestBody.distance < 0.12 ? SpatialRelationship.TOUCHING : SpatialRelationship.NEAR,
           environment: 'physics',
           metadata: { physicsLab: this.physicsLab, distance: nearestBody.distance },
@@ -147,13 +156,16 @@ export class ContextEngine {
     if (worldModel) {
       const physicalObjects = worldModel.getEntitiesByType('object');
       for (const obj of physicalObjects) {
+        const caps = obj.capabilities || TargetCapabilities.forPhysicalProp();
+
         if (obj.relations?.isHeld) {
           return new SpatialContext({
             targetType: ContextTargetType.PHYSICAL_PROP,
             targetEntity: obj,
             targetId: obj.id,
+            capabilities: caps,
             relationship: SpatialRelationship.HOLDING,
-            environment: 'physical_world',
+            environment: 'physical_room',
             timestamp
           });
         }
@@ -162,8 +174,9 @@ export class ContextEngine {
             targetType: ContextTargetType.PHYSICAL_PROP,
             targetEntity: obj,
             targetId: obj.id,
+            capabilities: caps,
             relationship: SpatialRelationship.TOUCHING,
-            environment: 'physical_world',
+            environment: 'physical_room',
             timestamp
           });
         }
@@ -172,8 +185,9 @@ export class ContextEngine {
             targetType: ContextTargetType.PHYSICAL_PROP,
             targetEntity: obj,
             targetId: obj.id,
+            capabilities: caps,
             relationship: SpatialRelationship.NEAR,
-            environment: 'physical_world',
+            environment: 'physical_room',
             timestamp
           });
         }
@@ -189,6 +203,7 @@ export class ContextEngine {
           targetType: ContextTargetType.INTERACTIVE_UI,
           targetEntity: interactiveEl,
           targetId: interactiveEl.id || interactiveEl.className || 'ui_button',
+          capabilities: TargetCapabilities.forInteractiveUI(),
           relationship: SpatialRelationship.OVER,
           environment: 'desktop',
           metadata: { element: interactiveEl },
@@ -197,11 +212,12 @@ export class ContextEngine {
       }
     }
 
-    // 5. Default Fallback: The 2D OS Desktop Surface
+    // 5. Default Fallback: The 2D OS Desktop Surface (macOS WindowServer, Safari, Finder)
     return new SpatialContext({
       targetType: ContextTargetType.OS_SURFACE,
       targetEntity: null,
       targetId: 'os_desktop',
+      capabilities: TargetCapabilities.forOSSurface(),
       relationship: SpatialRelationship.OVER,
       environment: 'desktop',
       metadata: { screen: { width: window.screen.width, height: window.screen.height } },
@@ -209,12 +225,13 @@ export class ContextEngine {
     });
   }
 
-  setStickyHold(targetType, targetEntity, targetId, environment) {
+  setStickyHold(targetType, targetEntity, targetId, environment, capabilities = null) {
     this.activeHeldEntity = {
       targetType,
       targetEntity,
       targetId,
       environment,
+      capabilities: capabilities || TargetCapabilities.forOSSurface(),
       heldSince: performance.now()
     };
   }
@@ -231,7 +248,6 @@ export class ContextEngine {
 
     for (const item of this.physicsLab.bodies) {
       const bPos = item.body.position;
-      // Convert Cannon coords to normalized space
       const dist = Math.hypot(handPos.x - (bPos.x + 0.5), handPos.y - (bPos.y + 0.5));
       if (dist < minDist) {
         minDist = dist;

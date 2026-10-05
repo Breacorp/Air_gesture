@@ -1,24 +1,25 @@
 /**
- * Action Resolver - Deterministic Intent-to-Action Mapper
+ * Action Resolver - Deterministic Capability-Based Action Mapper
  * 
- * "Air Gesture nunca debe aprender cómo funciona una aplicación.
- *  Air Gesture debe entender cómo funciona la interacción humana."
+ * "En lugar de preguntarle: '¿Qué aplicación es?'
+ *  preguntarle al mundo: '¿Qué puedo hacer con aquello que tengo delante?'"
+ * 
+ * Architecture:
+ * Intent + Target Capabilities -> Action
  * 
  * Resolves (SpatialIntent, SpatialContext) into concrete digital executions
- * without hardcoded application profiles:
- * - GRAB + 3D Object       -> Possess and translate 3D entity
- * - GRAB + Physical Prop   -> Sync physical proxy
- * - GRAB + OS Surface      -> pointer_down / drag_start on macOS
- * - SCALE + 3D Object      -> Scale 3D model geometry
- * - SCALE + OS Surface     -> Viewport zoom (Cmd+ / Cmd-)
- * - ROTATE + 3D Object     -> Orbital 3D rotation
- * - THROW + Physics Body   -> Impart linear/angular velocity
- * - SCROLL + OS/UI         -> Native scroll wheel
- * - POINT + OS/UI          -> Cursor navigation
+ * without any hardcoded application names or profiles:
+ * - GRAB    + grabbable  -> Possess entity (3D, physics, physical prop, or OS pointer_down)
+ * - DRAG    + movable    -> Translate entity (3D space, physics body, or OS drag_move)
+ * - THROW   + throwable  -> Impart physics momentum & velocity window
+ * - SCALE   + scalable   -> Scale 3D geometry or zoom OS viewport
+ * - ROTATE  + rotatable  -> Orbital 3D rotation or canvas orientation
+ * - SCROLL  + scrollable -> Smooth continuous scroll wheel
+ * - CLICK   + clickable  -> Atomic selection / trigger
+ * - POINT   + (any)      -> Reticle / pointer navigation
  */
 
 import { IntentType, IntentState } from './spatial-intent.js';
-import { ContextTargetType, SpatialRelationship } from './context-engine.js';
 import { globalEventBus } from '../event-bus.js';
 
 export class ActionResolver {
@@ -36,14 +37,16 @@ export class ActionResolver {
   }
 
   /**
-   * Resolve an intent within its spatial context
+   * Resolve an intent against the target's interaction capabilities
    * @param {SpatialIntent} intent
    * @param {SpatialContext} context
    */
   resolve(intent, context) {
-    if (!intent) return;
+    if (!intent || !context) return;
+    const caps = context.capabilities;
+    if (!caps || !caps.interactive) return;
 
-    // 1. GLOBAL SYSTEM FAILSAFE INTENTS (Bypass context)
+    // 1. GLOBAL SYSTEM FAILSAFE INTENTS (Bypass capabilities)
     if (intent.type === IntentType.CANCEL) {
       this._resolveCancel(intent);
       return;
@@ -54,250 +57,304 @@ export class ActionResolver {
       return;
     }
 
-    // 2. CONTEXT-DEPENDENT ACTION DISPATCH
-    switch (context.targetType) {
-      case ContextTargetType.VIRTUAL_3D_OBJECT:
-        this._resolve3DObjectAction(intent, context);
-        break;
-
-      case ContextTargetType.PHYSICS_RIGID_BODY:
-        this._resolvePhysicsAction(intent, context);
-        break;
-
-      case ContextTargetType.PHYSICAL_PROP:
-        this._resolvePhysicalPropAction(intent, context);
-        break;
-
-      case ContextTargetType.INTERACTIVE_UI:
-        this._resolveInteractiveUIAction(intent, context);
-        break;
-
-      case ContextTargetType.OS_SURFACE:
-      default:
-        this._resolveOSSurfaceAction(intent, context);
-        break;
-    }
-  }
-
-  // --- 3D VIRTUAL OBJECT ACTIONS (CAD, Studio, Holographic) ---
-  _resolve3DObjectAction(intent, context) {
-    const studio = context.metadata?.studio || this.studio;
-    if (!studio) {
-      // Fallback to desktop if studio unavailable
-      this._resolveOSSurfaceAction(intent, context);
-      return;
-    }
-
+    // 2. CAPABILITY-DRIVEN INTENT DISPATCH: Intent + Capabilities -> Action
     switch (intent.type) {
       case IntentType.POINT:
-        // Update laser reticle over model
-        studio.isHoveringModel = true;
+        this._resolvePoint(intent, context, caps);
+        break;
+
+      case IntentType.CLICK:
+      case IntentType.TOUCH:
+        if (caps.can('clickable')) {
+          this._resolveClick(intent, context, caps);
+        }
         break;
 
       case IntentType.GRAB:
-        if (intent.state === IntentState.START) {
-          studio.isGrabbing = true;
-          studio.interactionMode = 'fine_pinch';
-          studio.currentPoseLabel = 'AGARRADO';
-          this.contextEngine?.setStickyHold(context.targetType, context.targetEntity, context.targetId, context.environment);
+        if (caps.can('grabbable')) {
+          this._resolveGrab(intent, context, caps);
         }
         break;
 
       case IntentType.DRAG:
-        if (studio.modelContainer && intent.delta) {
-          // Direct 3D spatial translation
-          studio.modelContainer.position.x += (intent.delta.x || 0) * 0.005;
-          studio.modelContainer.position.y -= (intent.delta.y || 0) * 0.005;
-          if (intent.delta.z) {
-            studio.modelContainer.position.z += intent.delta.z * 0.005;
-          }
+        if (caps.can('movable')) {
+          this._resolveDrag(intent, context, caps);
         }
         break;
 
       case IntentType.RELEASE:
-        studio.isGrabbing = false;
-        studio.interactionMode = 'idle';
-        studio.currentPoseLabel = 'LIBRE';
-        this.contextEngine?.clearStickyHold();
+        this._resolveRelease(intent, context, caps);
+        break;
+
+      case IntentType.THROW:
+        if (caps.can('throwable')) {
+          this._resolveThrow(intent, context, caps);
+        } else {
+          // If target is not throwable, fallback to regular clean release
+          this._resolveRelease(intent, context, caps);
+        }
         break;
 
       case IntentType.SCALE:
-        if (studio.modelContainer && intent.delta) {
-          // Direct geometric scaling
-          const factor = 1.0 + (intent.delta > 0 ? 0.04 : -0.04);
-          studio.modelContainer.scale.multiplyScalar(factor);
+        if (caps.can('scalable')) {
+          this._resolveScale(intent, context, caps);
         }
         break;
 
       case IntentType.ROTATE:
-        if (studio.modelContainer && intent.delta) {
-          // Direct 3D rotation
-          studio.modelContainer.rotation.y += intent.delta * 1.5;
+        if (caps.can('rotatable')) {
+          this._resolveRotate(intent, context, caps);
+        }
+        break;
+
+      case IntentType.SCROLL:
+        if (caps.can('scrollable')) {
+          this._resolveScroll(intent, context, caps);
         }
         break;
 
       case IntentType.PUSH:
       case IntentType.PULL:
-        if (studio.modelContainer && intent.velocity) {
-          studio.modelContainer.position.z += (intent.type === IntentType.PUSH ? -0.05 : 0.05);
-        }
+        this._resolvePushPull(intent, context, caps);
         break;
     }
   }
 
-  // --- PHYSICS RIGID BODY ACTIONS ---
-  _resolvePhysicsAction(intent, context) {
-    const lab = context.metadata?.physicsLab || this.physicsLab;
-    if (!lab) {
-      this._resolveOSSurfaceAction(intent, context);
-      return;
+  // --- CAPABILITY HANDLERS ---
+
+  _resolvePoint(intent, context, caps) {
+    const x = intent.position?.screenX || intent.position?.x || 0;
+    const y = intent.position?.screenY || intent.position?.y || 0;
+
+    if (context.is3D()) {
+      const studio = context.metadata?.studio || this.studio;
+      if (studio) studio.isHoveringModel = true;
     }
 
-    const body = context.targetEntity;
-
-    switch (intent.type) {
-      case IntentType.GRAB:
-        if (intent.state === IntentState.START && body) {
-          lab.grabbedBody = body;
-          this.contextEngine?.setStickyHold(context.targetType, body, context.targetId, context.environment);
-        }
-        break;
-
-      case IntentType.DRAG:
-        if (lab.grabbedBody && intent.position) {
-          // Update physics body translation
-          lab.grabbedBody.position.x += (intent.delta?.x || 0) * 0.01;
-          lab.grabbedBody.position.y -= (intent.delta?.y || 0) * 0.01;
-          lab.grabbedBody.velocity.set(0, 0, 0); // cancel inertia during direct manipulation
-        }
-        break;
-
-      case IntentType.THROW:
-        if (lab.grabbedBody && intent.velocity) {
-          // Impart linear momentum to rigid body!
-          lab.grabbedBody.velocity.set(
-            intent.velocity.vx * 8.0,
-            -intent.velocity.vy * 8.0,
-            intent.velocity.vz * 8.0
-          );
-          lab.grabbedBody.angularVelocity.set(
-            (Math.random() - 0.5) * 6,
-            (Math.random() - 0.5) * 6,
-            (Math.random() - 0.5) * 6
-          );
-        }
-        // Fallthrough to release
-      case IntentType.RELEASE:
-        lab.grabbedBody = null;
-        this.contextEngine?.clearStickyHold();
-        break;
-
-      case IntentType.SCALE:
-        if (lab.grabbedBody && intent.delta) {
-          const factor = 1.0 + (intent.delta > 0 ? 0.05 : -0.05);
-          // Scale collision shape and mesh
-          if (lab.grabbedBody.shapes?.[0]) {
-            lab.grabbedBody.shapes[0].scale?.set(factor, factor, factor);
-          }
-        }
-        break;
-    }
+    // Always keep pointer coordinates synchronized
+    this.browser?.movePointer?.(x, y);
+    this.macos?.movePointer?.(x, y);
   }
 
-  // --- PHYSICAL PROP ACTIONS ---
-  _resolvePhysicalPropAction(intent, context) {
-    const prop = context.targetEntity;
-    if (!prop) return;
-
-    if (intent.type === IntentType.GRAB) {
-      prop.relations.isHeld = true;
-      this.contextEngine?.setStickyHold(context.targetType, prop, context.targetId, context.environment);
-    } else if (intent.type === IntentType.RELEASE) {
-      prop.relations.isHeld = false;
-      this.contextEngine?.clearStickyHold();
-    }
-  }
-
-  // --- INTERACTIVE 2D UI ACTIONS ---
-  _resolveInteractiveUIAction(intent, context) {
-    const el = context.targetEntity;
-
-    if (intent.type === IntentType.CLICK || (intent.type === IntentType.GRAB && intent.state === IntentState.START)) {
-      if (el && typeof el.click === 'function') {
-        el.click();
-      }
-    }
-
-    // Also mirror to OS/Browser pointers
-    this._resolveOSSurfaceAction(intent, context);
-  }
-
-  // --- UNIVERSAL OS SURFACE ACTIONS (macOS, Safari, Finder, Desktop) ---
-  _resolveOSSurfaceAction(intent, context) {
+  _resolveClick(intent, context, caps) {
     const x = intent.position?.screenX || intent.position?.x || 0;
     const y = intent.position?.screenY || intent.position?.y || 0;
     const button = intent.payload?.button || 'left';
 
-    switch (intent.type) {
-      case IntentType.POINT:
-        this.browser?.movePointer?.(x, y);
-        this.macos?.movePointer?.(x, y);
-        break;
+    if (context.isUI() && context.targetEntity?.click) {
+      context.targetEntity.click();
+    }
 
-      case IntentType.TOUCH:
-      case IntentType.CLICK:
-        this.browser?.click?.(x, y, button);
-        // Atomic OS click: down -> up
-        this.macos?.pointerDown?.(x, y, button);
-        setTimeout(() => this.macos?.pointerUp?.(x, y, button), 35);
-        break;
+    this.browser?.click?.(x, y, button);
 
-      case IntentType.GRAB:
-        if (intent.state === IntentState.START) {
-          this.browser?.pointerDown?.(x, y, button);
-          this.macos?.pointerDown?.(x, y, button);
+    // Atomic OS click: pointer_down -> pointer_up
+    this.macos?.pointerDown?.(x, y, button);
+    setTimeout(() => this.macos?.pointerUp?.(x, y, button), 35);
+  }
+
+  _resolveGrab(intent, context, caps) {
+    if (intent.state !== IntentState.START) return;
+    const x = intent.position?.screenX || intent.position?.x || 0;
+    const y = intent.position?.screenY || intent.position?.y || 0;
+    const button = intent.payload?.button || 'left';
+
+    // 1. If target is a 3D Virtual Object
+    if (context.is3D()) {
+      const studio = context.metadata?.studio || this.studio;
+      const physicsLab = context.metadata?.physicsLab || this.physicsLab;
+
+      if (physicsLab && context.targetType === 'physics_rigid_body' && context.targetEntity) {
+        physicsLab.grabbedBody = context.targetEntity;
+        this.contextEngine?.setStickyHold(context.targetType, context.targetEntity, context.targetId, context.environment, caps);
+        return;
+      }
+
+      if (studio && studio.modelContainer) {
+        studio.isGrabbing = true;
+        studio.interactionMode = 'fine_pinch';
+        studio.currentPoseLabel = 'AGARRADO';
+        this.contextEngine?.setStickyHold(context.targetType, context.targetEntity, context.targetId, context.environment, caps);
+        return;
+      }
+    }
+
+    // 2. If target is a Physical Prop
+    if (context.isPhysical() && context.targetEntity) {
+      context.targetEntity.relations.isHeld = true;
+      this.contextEngine?.setStickyHold(context.targetType, context.targetEntity, context.targetId, context.environment, caps);
+      return;
+    }
+
+    // 3. Fallback: Surface Grab (OS window drag, text selection, DOM drag)
+    this.browser?.pointerDown?.(x, y, button);
+    this.macos?.pointerDown?.(x, y, button);
+  }
+
+  _resolveDrag(intent, context, caps) {
+    const x = intent.position?.screenX || intent.position?.x || 0;
+    const y = intent.position?.screenY || intent.position?.y || 0;
+    const button = intent.payload?.button || 'left';
+    const delta = intent.delta || { x: 0, y: 0, z: 0 };
+
+    // 1. If target is 3D Virtual Object
+    if (context.is3D()) {
+      const studio = context.metadata?.studio || this.studio;
+      const physicsLab = context.metadata?.physicsLab || this.physicsLab;
+
+      if (physicsLab && physicsLab.grabbedBody) {
+        physicsLab.grabbedBody.position.x += delta.x * 0.01;
+        physicsLab.grabbedBody.position.y -= delta.y * 0.01;
+        physicsLab.grabbedBody.velocity.set(0, 0, 0);
+        return;
+      }
+
+      if (studio && studio.modelContainer) {
+        studio.modelContainer.position.x += delta.x * 0.005;
+        studio.modelContainer.position.y -= delta.y * 0.005;
+        if (delta.z) studio.modelContainer.position.z += delta.z * 0.005;
+        return;
+      }
+    }
+
+    // 2. If target is Physical Prop
+    if (context.isPhysical() && context.targetEntity) {
+      context.targetEntity.position.x += delta.x * 0.001;
+      context.targetEntity.position.y += delta.y * 0.001;
+      return;
+    }
+
+    // 3. Fallback: OS Desktop Surface Drag
+    if (intent.state === IntentState.START) {
+      this.browser?.dragStart?.(x, y, button);
+      this.macos?.dragStart?.(x, y, button);
+    } else if (intent.state === IntentState.ACTIVE) {
+      this.browser?.dragMove?.(x, y, button);
+      this.macos?.drag?.(x, y, button);
+    } else if (intent.state === IntentState.END) {
+      this.browser?.dragEnd?.(x, y, button);
+      this.macos?.dragEnd?.(x, y, button);
+    }
+  }
+
+  _resolveThrow(intent, context, caps) {
+    const physicsLab = context.metadata?.physicsLab || this.physicsLab;
+    const body = physicsLab?.grabbedBody || context.targetEntity;
+    const velocity = intent.velocity || { vx: 0, vy: 0, vz: 0, speed: 0 };
+
+    if (body && typeof body.velocity?.set === 'function') {
+      // Impart real linear & angular momentum
+      body.velocity.set(
+        velocity.vx * 8.0,
+        -velocity.vy * 8.0,
+        (velocity.vz || 0) * 8.0
+      );
+      if (typeof body.angularVelocity?.set === 'function') {
+        body.angularVelocity.set(
+          (Math.random() - 0.5) * 6,
+          (Math.random() - 0.5) * 6,
+          (Math.random() - 0.5) * 6
+        );
+      }
+    }
+
+    this._resolveRelease(intent, context, caps);
+  }
+
+  _resolveRelease(intent, context, caps) {
+    const x = intent.position?.screenX || intent.position?.x || 0;
+    const y = intent.position?.screenY || intent.position?.y || 0;
+    const button = intent.payload?.button || 'left';
+
+    if (context.is3D()) {
+      const studio = context.metadata?.studio || this.studio;
+      const physicsLab = context.metadata?.physicsLab || this.physicsLab;
+
+      if (physicsLab) physicsLab.grabbedBody = null;
+      if (studio) {
+        studio.isGrabbing = false;
+        studio.interactionMode = 'idle';
+        studio.currentPoseLabel = 'LIBRE';
+      }
+    }
+
+    if (context.isPhysical() && context.targetEntity) {
+      context.targetEntity.relations.isHeld = false;
+    }
+
+    this.contextEngine?.clearStickyHold();
+
+    // Release pointer in browser and macOS
+    this.browser?.pointerUp?.(x, y, button);
+    this.macos?.pointerUp?.(x, y, button);
+  }
+
+  _resolveScale(intent, context, caps) {
+    const delta = typeof intent.delta === 'number' ? intent.delta : (intent.payload?.distanceDelta || 0);
+
+    // 1. If 3D entity: scale geometry directly
+    if (context.is3D()) {
+      const studio = context.metadata?.studio || this.studio;
+      const physicsLab = context.metadata?.physicsLab || this.physicsLab;
+
+      if (studio && studio.modelContainer) {
+        const factor = 1.0 + (delta > 0 ? 0.04 : -0.04);
+        studio.modelContainer.scale.multiplyScalar(factor);
+        return;
+      }
+
+      if (physicsLab && physicsLab.grabbedBody) {
+        const factor = 1.0 + (delta > 0 ? 0.05 : -0.05);
+        if (physicsLab.grabbedBody.shapes?.[0]?.scale) {
+          physicsLab.grabbedBody.shapes[0].scale.multiplyScalar(factor);
         }
-        break;
+        return;
+      }
+    }
 
-      case IntentType.DRAG:
-        if (intent.state === IntentState.START) {
-          this.browser?.dragStart?.(x, y, button);
-          this.macos?.dragStart?.(x, y, button);
-        } else if (intent.state === IntentState.ACTIVE) {
-          this.browser?.dragMove?.(x, y, button);
-          this.macos?.drag?.(x, y, button);
-        } else if (intent.state === IntentState.END) {
-          this.browser?.dragEnd?.(x, y, button);
-          this.macos?.dragEnd?.(x, y, button);
-        }
-        break;
+    // 2. If OS surface: viewport zoom via native hotkey Cmd + / Cmd -
+    if (Math.abs(delta) > 0.012) {
+      const key = delta > 0 ? 'plus' : 'minus';
+      this.macos?.hotkey?.(['cmd'], key);
+    }
+  }
 
-      case IntentType.RELEASE:
-        this.browser?.pointerUp?.(x, y, button);
-        this.macos?.pointerUp?.(x, y, button);
-        break;
+  _resolveRotate(intent, context, caps) {
+    const angleDelta = typeof intent.delta === 'number' ? intent.delta : (intent.payload?.angleDeltaRad || 0);
 
-      case IntentType.SCROLL:
-        if (intent.delta) {
-          const deltaX = intent.delta.x || 0;
-          const deltaY = intent.delta.y || 0;
-          this.macos?.scroll?.(deltaX, deltaY);
-        }
-        break;
+    // 1. If 3D entity: rotate orientation
+    if (context.is3D()) {
+      const studio = context.metadata?.studio || this.studio;
+      if (studio && studio.modelContainer) {
+        studio.modelContainer.rotation.y += angleDelta * 1.5;
+        return;
+      }
+    }
 
-      case IntentType.SCALE:
-        // Desktop zoom via Cmd + / Cmd -
-        if (Math.abs(intent.delta || 0) > 0.012) {
-          const key = intent.delta > 0 ? 'plus' : 'minus';
-          this.macos?.hotkey?.(['cmd'], key);
-        }
-        break;
+    // 2. If OS surface: horizontal scroll or custom gesture
+    if (Math.abs(angleDelta) > 0.05) {
+      this.macos?.scroll?.(angleDelta > 0 ? 12 : -12, 0);
+    }
+  }
 
-      case IntentType.PUSH:
-        if (intent.payload?.macroAction === 'system_mission_control') {
-          this.macos?.hotkey?.(['ctrl'], 'up');
-        }
-        break;
+  _resolveScroll(intent, context, caps) {
+    if (intent.delta) {
+      const deltaX = intent.delta.x || 0;
+      const deltaY = intent.delta.y || 0;
+      this.macos?.scroll?.(deltaX, deltaY);
+    }
+  }
+
+  _resolvePushPull(intent, context, caps) {
+    if (intent.payload?.macroAction === 'system_mission_control') {
+      this.macos?.hotkey?.(['ctrl'], 'up');
+      return;
+    }
+
+    if (context.is3D()) {
+      const studio = context.metadata?.studio || this.studio;
+      if (studio && studio.modelContainer && intent.velocity) {
+        studio.modelContainer.position.z += (intent.type === IntentType.PUSH ? -0.05 : 0.05);
+      }
     }
   }
 

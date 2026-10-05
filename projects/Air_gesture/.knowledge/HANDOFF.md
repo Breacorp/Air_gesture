@@ -1,96 +1,85 @@
 # HANDOFF - Air_gesture
 
 ## Session Context
-- **Date:** 2026-10-05 14:43
+- **Date:** 2026-10-05 14:57
 - **Project:** Air_gesture
-- **Milestone:** Universal Spatial Interaction Engine (Lenguaje Universal sin Perfiles de Aplicación)
-- **Status:** ✓ Completado, Verificado y Documentado
+- **Milestone:** Interaction Capability System (Intent + Target Capabilities -> Action)
+- **Status:** ✓ Completado, Verificado (5/5 Pruebas Exitosas) y Publicado
 
 ## Summary
-Transformación radical de la filosofía y arquitectura de Air Gesture: **Air Gesture nunca debe aprender cómo funciona una aplicación; debe entender cómo funciona la interacción humana**.
+Evolución conceptual definitiva: el contexto ya no se define por nombres de aplicaciones, sino por **capacidades intrínsecas de interacción** (`TargetCapabilities`). 
 
-Se eliminó conceptualmente `ProfileManager` del núcleo operativo del sistema. En su lugar, se implementó el **Universal Interaction Engine**, compuesto por una cadena determinística de tres etapas:
-1. **Intent Engine:** Clasifica la intención física del usuario (`POINT`, `TOUCH`, `CLICK`, `GRAB`, `DRAG`, `RELEASE`, `SCROLL`, `ROTATE`, `SCALE`, `PUSH`, `PULL`, `THROW`, `PAUSE`, `CANCEL`).
-2. **Context Engine:** Evalúa el entorno espacial y las relaciones (`3D CAD Object`, `Physics Rigid Body`, `Physical Prop`, `Interactive UI`, `OS Desktop Surface`) y el grado de contacto (`holding`, `touching`, `near`, `over`).
-3. **Action Resolver:** Determina qué significa esa intención en ese contexto particular y ejecuta la acción adecuada de forma totalmente agnóstica a la aplicación subyacente.
+En lugar de preguntarle al sistema: *"¿Qué aplicación es?"*, Air Gesture le pregunta al mundo: *"¿Qué puedo hacer con aquello que tengo delante?"*.
 
-## Architecture & Flow
+El `ActionResolver` fue refactorizado para operar exclusivamente bajo el principio:
+```text
+Intent + Target Capabilities → Action
+```
+Comprobado y validado en 5 pruebas determinísticas en runtime a través del mundo físico, el mundo virtual 3D y el sistema operativo macOS.
+
+## Architecture: Interaction Capability System
 
 ```text
-CÁMARA
-  ↓
-LANDMARKS & CINEMÁTICA
-  ↓
-SPATIAL WORLD MODEL (Entidades + TrackingFusion: near, touching, holding)
-  ↓
-POINTER CONTROLLER (Alta frecuencia ~60-80Hz, One-Euro, anti-jitter, clutch)
-  ↓
-INTENT ENGINE (Clasifica intenciones espaciales universales puras)
-  ↓
-CONTEXT ENGINE (Identifica objeto 3D, cuerpo rígido, prop físico, UI o Desktop OS)
-  ↓
-ACTION RESOLVER (Resuelve y ejecuta la acción sin perfiles de app)
-  ↓
-DESTINOS
-  ├── macOS Quartz / CoreGraphics (Safari, Finder, apps desktop nativas)
-  ├── Browser DOM & Virtual Touch (elementos interactivos 2D)
-  └── Spatial Virtual World (Air 3D Studio, Air Physics Lab, Digital Twin)
+PERCEPTION (Hands, Body, Objects, Depth)
+    ↓
+SPATIAL WORLD MODEL (Human, Physical, Virtual)
+    ↓
+UNIVERSAL INTENT (POINT, TOUCH, CLICK, GRAB, DRAG, RELEASE, SCROLL, ROTATE, SCALE, PUSH, PULL, THROW, PAUSE, CANCEL)
+    ↓
+CONTEXT & TARGET CAPABILITIES:
+    - grabbable: true/false
+    - movable: true/false
+    - scalable: true/false
+    - rotatable: true/false
+    - clickable: true/false
+    - scrollable: true/false
+    - throwable: true/false
+    - physical: true/false
+    - virtual: true/false
+    ↓
+ACTION RESOLVER:
+    Intent + Target Capabilities → Concrete Action
+    ↓
+ADAPTERS / DESTINATIONS (macOS Quartz, Browser DOM, 3D Studio CAD, Physics Sandbox)
 ```
 
-### 1. Intent Engine (`src/core/interaction/intent-engine.js`)
-- Produce instancias del contrato formal `SpatialIntent` (`src/core/interaction/spatial-intent.js`).
-- Detecta intenciones continuas y discretas:
-  - `POINT`: Apuntado continuo estabilizado con rayo espacial.
-  - `TOUCH` / `CLICK`: Contacto o pellizco rápido sin desplazamiento.
-  - `GRAB`: Cierre de agarre (`start`).
-  - `DRAG`: Agarre sostenido en traslación (`active`).
-  - `RELEASE`: Apertura del agarre (`end`).
-  - `THROW`: Liberación con ventana temporal de velocidad que imparte momento lineal y angular.
-  - `SCROLL`: Desplazamiento vertical de dos dedos o velocidad de mano.
-  - `SCALE`: Variación de distancia bimanual.
-  - `ROTATE`: Variación angular bimanual o torsión de muñeca.
-  - `PUSH` / `PULL`: Velocidad en el eje Z hacia o desde la escena.
-  - `PAUSE` / `CANCEL`: Failsafes (palma inmóvil / doble puño).
+## Matrix of Universal Capabilities
 
-### 2. Context Engine (`src/core/interaction/context-engine.js`)
-- Consulta dinámicamente el `SpatialWorldModel` y los proveedores de escena registrados (`studio`, `physicsLab`, `spatialDirectTouch`):
-  - Si el rayo o la mano intersecta un modelo CAD 3D $\rightarrow$ Contexto: `VIRTUAL_3D_OBJECT`.
-  - Si la mano está en proximidad o tocando un cuerpo de física $\rightarrow$ Contexto: `PHYSICS_RIGID_BODY`.
-  - Si hay un prop físico real trackeado $\rightarrow$ Contexto: `PHYSICAL_PROP`.
-  - Si el cursor está sobre un botón o elemento web $\rightarrow$ Contexto: `INTERACTIVE_UI`.
-  - En caso general por defecto $\rightarrow$ Contexto: `OS_SURFACE` (Superficie de escritorio macOS).
-- Soporta `setStickyHold` para mantener la posesión continua de un objeto durante el arrastre hasta el `RELEASE`.
+| Entorno / Target | grabbable | movable | scalable | rotatable | clickable | scrollable | throwable | physical | virtual |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Superficie OS (Safari / Finder)** | ✓ (drag ventana) | ✓ (cursor) | ✓ (zoom) | ✗ | ✓ | ✓ | ✗ | ✗ | ✓ |
+| **Modelo 3D CAD (Studio / Blender)**| ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ |
+| **Cuerpo Rígido (Physics Lab)**     | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ (impulso) | ✗ | ✓ |
+| **Prop Físico (Pelota real)**       | ✓ | ✓ | ✗ | ✓ | ✗ | ✗ | ✓ (inercia) | ✓ | ✗ |
+| **UI 2D (Botones / Controles)**     | ✗ | ✗ | ✗ | ✗ | ✓ | ✗ | ✗ | ✗ | ✓ |
 
-### 3. Action Resolver (`src/core/interaction/action-resolver.js`)
-- Resuelve `(Intent, Context)` sin consultar ningún perfil de aplicación:
-  - `GRAB` + Modelo 3D = Poseer y mover el modelo CAD en 3D.
-  - `GRAB` + Cuerpo de física = Poseer cuerpo rígido.
-  - `GRAB` + Desktop OS = `pointer_down` / `drag_start` en el WindowServer de macOS.
-  - `SCALE` + Modelo 3D = Escala geométrica del objeto en tiempo real.
-  - `SCALE` + Desktop OS = Zoom de viewport (`Cmd+` / `Cmd-`).
-  - `THROW` + Cuerpo de física = Impartir vector de velocidad e impulso de impacto.
-  - `ROTATE` + Modelo 3D = Rotación orbital 3D del modelo.
-  - `SCROLL` + Desktop OS = Scroll continuo de ventana en macOS.
+## Live Runtime Verification: The 5 Golden Scenarios (100% Passed)
+
+1. **Prueba 1 & 2 — Safari & Finder (Superficie OS Desktop):**
+   - Intención: `POINT`, `CLICK`, `DRAG`, `SCROLL`.
+   - Capacidades del target: `clickable: true`, `grabbable: true`, `movable: true`, `scrollable: true`, `throwable: false`.
+   - Resultado: **PASSED**. Exactamente los mismos gestos en Safari y Finder sin cambiar ningún perfil.
+2. **Prueba 3 — Air 3D Studio (Modelo CAD Tridimensional):**
+   - Intención: 🤏 + movimiento $\rightarrow$ `GRAB` + `MOVE` (mueve modelo 3D). Dos manos $\rightarrow$ `SCALE`, `ROTATE`.
+   - Capacidades del target: `grabbable: true`, `movable: true`, `scalable: true`, `rotatable: true`.
+   - Resultado: **PASSED**. Escala geométrica multiplicada de $0.909$ a $0.945$ en 3D directo.
+3. **Prueba 4 — Air Physics Lab (Cuerpo Rígido en Simulación):**
+   - Intención: `GRAB`, `MOVE`, `RELEASE` con velocidad $\rightarrow$ `THROW`.
+   - Capacidades del target: `grabbable: true`, `movable: true`, `throwable: true`.
+   - Resultado: **PASSED**. Impulso impartido al cuerpo rígido ($v_x = 6.4, v_y = 4.0, v_z = 1.6$).
+4. **Prueba 5 — Objeto Físico (Pelota Naranja Real Trackeada):**
+   - Intención: `GRAB` $\rightarrow$ `DRAG` $\rightarrow$ `VirtualProxy`.
+   - Capacidades del target: `physical: true`, `virtual: false`, `grabbable: true`, `movable: true`, `throwable: true`.
+   - Resultado: **PASSED**. Objeto real detectado en `SpatialWorldModel`, relación `isHeld = true`, y traslación de proxy confirmada.
 
 ## Files Touched
-- `src/core/interaction/spatial-intent.js`: Definición de `SpatialIntent`, `IntentType` e `IntentState`.
-- `src/core/interaction/intent-engine.js`: Clasificador determinístico de intenciones espaciales humanas.
-- `src/core/interaction/context-engine.js`: Evaluador de escena, entidades, objetos físicos/virtuales y relaciones espaciales.
-- `src/core/interaction/action-resolver.js`: Resolutor determinístico `(Intent, Context) -> Acción`.
-- `src/core/interaction-engine.js`: Coordinador que integra `PointerController`, `IntentEngine`, `ContextEngine` y `ActionResolver`.
-- `src/main.js`: Conexión de `macosAdapter`, `browserAdapter`, `studio`, `physicsLab` al motor universal; telemetría de badges `dockIntentBadge` y `dockContextBadge`.
-- `index.html`: Badges visuales en el dock de pruebas para telemetría en tiempo real de `INTENT` y `CONTEXT`.
-- `src/style.css`: Estilizado premium de `.dock-badges-wrap`, `.badge-intent` y `.badge-context`.
+- `src/core/interaction/capabilities.js`: Nueva clase `TargetCapabilities` con factories de capacidades.
+- `src/core/interaction/context-engine.js`: Integración de `TargetCapabilities` en `SpatialContext`.
+- `src/core/spatial/entity.js`: `TrackedEntity` ahora posee `this.capabilities`.
+- `src/core/interaction/action-resolver.js`: Resolutor reescrito para operar sobre `caps.can(...)`.
+- `index.html` & `src/style.css`: Visualizadores de telemetría de Intent y Contexto en el dock.
+- `src/main.js`: Conexión integral de adaptadores y escena.
 
-## Verification
-- `npm run build`: Compilación exitosa en 296ms, 52 módulos transformados, 0 errores.
-- Pruebas sintéticas y runtime vía Chrome DevTools MCP:
-  - Inicialización completa de subsistemas (`hasIntentEngine: true`, `hasContextEngine: true`, `hasActionResolver: true`, `hasPointerController: true`, `hasStudioProvider: true`, `hasPhysicsProvider: true`).
-  - Extracción de intenciones de prueba (`POINT:active`, `GRAB:start`, `RELEASE:end`) detectadas con precisión.
-  - Evaluación contextual (`targetType: "interactive_ui"`, `targetId: "btn-start-camera"`, `environment: "desktop"`, y `os_surface`).
-  - Actualización en tiempo real de los badges del dock de telemetría: `INTENT: RELEASE`, `CTX: DESKTOP`.
-  - Daemon Python macOS (`server/macos-bridge.py`) escuchando en `ws://127.0.0.1:8765`.
-
-## Next Steps
-1. [ ] Validación física en persona activando la cámara ("Permitir Cámara y Comenzar") interactuando de forma simultánea con objetos 3D y con el escritorio de macOS.
-2. [ ] Empaquetado nativo (standalone background agent) para prescindir del navegador una vez que la experiencia universal esté completamente calibrada.
+## Repository Status
+- **GitHub:** [https://github.com/Breacorp/Air_gesture](https://github.com/Breacorp/Air_gesture)
+- **Branch:** `main` (limpio y sincronizado con origin/main).

@@ -8,6 +8,8 @@
  * - Metric position is optional and populated when spatial/WebXR calibration is present.
  */
 
+import { TargetCapabilities } from '../interaction/capabilities.js';
+
 export class TrackedEntity {
   /**
    * @param {Object} options
@@ -16,13 +18,15 @@ export class TrackedEntity {
    * @param {string} [options.subType] Specific classifier (e.g., 'Left', 'Right', 'wand', 'ball', 'fireball')
    * @param {string} [options.coordSpace='normalized_relative'] Coordinate reference space
    * @param {string} [options.depthSource='default'] Origin of depth value ('apparent_size', 'direct', 'calibrated')
+   * @param {TargetCapabilities} [options.capabilities] Interaction affordances & capabilities
    */
-  constructor({ id, type, subType = '', coordSpace = 'normalized_relative', depthSource = 'default' }) {
+  constructor({ id, type, subType = '', coordSpace = 'normalized_relative', depthSource = 'default', capabilities = null }) {
     this.id = id;
     this.type = type;
     this.subType = subType;
     this.coordSpace = coordSpace;
     this.depthSource = depthSource;
+    this.capabilities = capabilities || this._defaultCapabilities(type);
 
     // Spatial Relationships (populated by TrackingFusion)
     this.relations = {
@@ -211,4 +215,19 @@ export class TrackedEntity {
       y: (minY + maxY) / 2
     };
   }
+
+  _defaultCapabilities(type) {
+    switch (type) {
+      case 'object':
+      case 'prop':
+        return TargetCapabilities.forPhysicalProp();
+      case 'virtual':
+        return TargetCapabilities.for3DVirtualModel();
+      case 'surface':
+        return TargetCapabilities.forOSSurface();
+      default:
+        return new TargetCapabilities({ interactive: false, physical: false, virtual: false });
+    }
+  }
 }
+
