@@ -1,76 +1,80 @@
 # HANDOFF - Air_gesture
 
 ## Session Context
-- **Date:** 2026-10-05 15:25
+- **Date:** 2026-10-05 15:36
 - **Project:** Air_gesture
-- **Milestone:** Rediseño Arquitectónico: Multi-Signal Object Perception & Temporal Tracking Engine
-- **Status:** ✓ Completado, Verificado con 32 Tests Unitarios/Integración y Desplegado en GitHub
+- **Milestone:** Plataforma de Juegos Espaciales: AirGameAPI & Air Games Lab (Pong, Fruit Ninja, Basketball)
+- **Status:** ✓ Completado, Verificado con 20 Tests Unitarios/Integración y Desplegado en GitHub
 
 ## Summary
-Reemplazo total del enfoque primitivo de "detector de colores HSV" por una arquitectura robusta de **Percepción de Objetos Multiseñal (Appearance + Geometry + Motion)**:
-1. **El color como señal auxiliar, no definición:**
-   - Detecta cualquier objeto físico (naranja flúor, negro, metálico, rojo, azul, transparente o neutro).
-   - Combina luminancia extrema (objetos oscuros/metálicos), contraste cromático, gradientes de bordes y sustracción de piel.
-2. **Separación de Tracking vs. Reconocimiento:**
-   - Tracking ("¿Dónde está el objeto?") opera de forma autónoma antes de que el objeto sea clasificado ("¿Qué objeto es?").
-   - Identidad persistente estandarizada: `object-001`, `object-002`, etc.
-3. **Resistencia a Oclusiones Manuales y Dead-Reckoning:**
-   - Cuando la mano sostiene el objeto (ej. destornillador), calcula oclusión exacta (ej. `visible: 63%, occluded: 37%, track: ACTIVE`).
-   - Si la mano cubre temporalmente el objeto o realiza un barrido rápido, el tracker activa predicción inercial (*dead-reckoning* $p_t = p_{t-1} + v \cdot dt$) y pasa a estado `COASTING` sin perder el ID `object-001`.
-4. **Visualización 3D y Rastro de Trayectoria:**
-   - Bounding box 3D de alta tecnología con etiqueta flotante billboard (`OBJECT #001 [ACTIVE 94%]`).
-   - Contorno de silueta 3D y rastro de migas de pan (*breadcrumb trail* `• • •`) trazado en el espacio 3D.
-5. **Panel UI de Percepción Dedicado:**
-   - Tarjeta **OBJECT PERCEPTION** en el HUD mostrando: `OBJECT #001`, `Tracking: ACTIVE`, `Confidence: 94%`, `Occlusion: 31% (Vis 69%)`, `Position`, `Velocity`, `Rotation`, `Shape: elongated (screwdriver)`, `Silhouette: detected`, `Depth: estimated`, `Reconstruction: pending`.
+Transformación arquitectónica de Air Gesture: evolución de una herramienta de gestos a una **Plataforma de Juegos Espaciales Controlados por Cámara**, donde el cuerpo, las manos y los objetos son el joystick físico universal:
 
-## Architecture: Multi-Signal Object Perception
+1. **Universal Game Interaction API (`AirGameAPI`):**
+   - Desacoplamiento total de la lógica de videojuegos respecto a MediaPipe y visión computacional cruda.
+   - API unificada orientada a eventos e intenciones cinemáticas:
+     - `hand.move`: Posición normalizada, velocidad tridimensional $(v_x, v_y, v_z)$, rapidez e indicador de agarre.
+     - `hand.slash`: Detección cinemática de tajos/cortes de espada de alta velocidad ($P_1 \to P_2 \to P_3$) con cálculo geométrico de intersección segmento-círculo.
+     - `hand.pinch` / `hand.pinch_release`: Detección precisa de selección o sujeción.
+     - `hand.grab` / `hand.release`: Sujeción física y disparo inercial de objetos con impulso cinético real.
+     - `body.jump` / `body.crouch` / `body.pose`: Eventos corporales de esquiva, salto y postura.
+     - `object.move` / `object.throw`: Seguimiento de controles físicos de juego.
+   - Consulta directa del modelo espacial: `world.hands`, `world.body`, `world.objects`, `world.entities`, `world.relations`.
+2. **Air Games Lab (`AirGamesLab`):**
+   - **🏓 Air Pong:** Tenis de mesa espacial dual-hand o 2 jugadores (Mano Izq = Paleta Izq, Mano Der = Paleta Der o vs IA). Transferencia de momento tangencial según la velocidad vertical de la paleta.
+   - **🍉 Air Fruit Ninja:** Tajos aéreos de espada espacial. Frutas generadas con trayectorias parabólicas físicas (Sandías, Naranjas, Manzanas, Plátanos y Bombas). División en mitades con rotación angular, partículas de jugo y combos.
+   - **🏀 Air Basketball:** Cancha física con aro, tablero y red. Detección de aproximación de mano $\to$ `GRAB` (pellizco) $\to$ `RELEASE` con vector de velocidad de mano $\to$ parábola gravitacional, rebotes y detección de canasta limpia (*swish*).
+3. **Audio Espacial Procedural (`AirGameAudio`):**
+   - Generación de efectos sonoros mediante Web Audio API sin dependencias de archivos de audio externos (golpes de paleta, tajos de espada, explosiones, canastas swish y botes).
+4. **UI Arcade Moderna:**
+   - Botón `🎮 Air Games` en la barra superior.
+   - Modal arcade translúcido con pestañas para alternar entre juegos a 60 FPS, botón de reinicio y mute.
+
+## Architecture: Spatial Gaming Platform
 
 ```text
-                 OBJECT PERCEPTION
-                        │
-        ┌───────────────┼────────────────┐
-        ↓               ↓                ↓
-     Appearance       Geometry        Motion
-        │               │                │
-    color/texture    shape/edges      tracking
-        │               │                │
-        └───────────────┼────────────────┘
-                        ↓
-                 OBJECT TRACK (object-001)
-             (Dead-Reckoning on Occlusion)
-                        ↓
-                  WORLD MODEL
-                        │
-         ┌──────────────┴──────────────┐
-         ▼                             ▼
-   HUD PERCEPTION                3D VISUALIZER
- (Telemetry Card)         (Box + Label + Contour + •••)
+                  AIR GESTURE
+                       │
+                 SPATIAL ENGINE
+                       │
+        ┌──────────────┼──────────────┐
+        ↓              ↓              ↓
+      HAND            BODY          OBJECT
+        │              │              │
+        └──────────────┼──────────────┘
+                       ↓
+                UNIVERSAL INTENT
+                       ↓
+               AIR GAME ENGINE API (AirGameAPI)
+                       │
+        ┌──────────────┼──────────────┐
+        ↓              ↓              ↓
+     Air Pong    Fruit Ninja    Air Basketball
+  (Dual Paddle)  (Blade Slash)   (Kinetic Throw)
 ```
 
 ## Files Touched
-- `src/core/perception/objects/object-detector.js`: Detección multiseñal (apariencia, bordes/geometría, gradiente de movimiento con frame anterior, agarre manual y porcentaje de oclusión).
-- `src/core/perception/objects/object-tracking-engine.js`: Tracking temporal con IDs persistentes `object-001`, ciclo de vida `ACTIVE` $\to$ `OCCLUDED` $\to$ `COASTING`, extrapolación inercial y buffer de trayectoria 3D.
-- `src/core/perception/object-tracker.js`: Reemplazo del viejo tracker HSV por el motor multiseñal completo con selector de hint auxiliar.
-- `src/core/perception/perception-engine.js`: Despacho de landmarks de manos al ObjectTracker y actualización de telemetría de objetos en stats.
-- `src/core/spatial/entity.js`: Almacenamiento directo de `boundingBox`, `contour`, `trajectory` y metadata en `TrackedEntity`.
-- `src/render/hand-visualizer-3d.js`: Rig 3D para objetos con bounding box alámbrico, billboard canvas sprite (`OBJECT #001`), contorno 3D y migas de trayectoria (`• • •`).
-- `src/ui/telemetry-hud.js`: Tarjeta de telemetría **OBJECT PERCEPTION** con todas las métricas solicitadas.
-- `index.html`: Botón de control `🎯 Objetos: ON/OFF`, selector de pistas auxiliares y contenedor estructurado de telemetría.
-- `src/main.js`: Exposición de handles de diagnóstico en `window` (`__hud`, `__visualizer`, `__perceptionTracker`).
-- `test/test-object-perception.js`: Suite completa de 32 tests automáticos de integración y tracking continuo.
+- `src/games/air-game-api.js`: Universal Game Interaction API con listeners, despachador de cinemática, detector de tajos e intersecciones geométricas.
+- `src/games/air-games-lab.js`: Motor de ejecución y renderizado 60 FPS de Air Pong, Air Fruit Ninja y Air Basketball.
+- `src/games/air-game-audio.js`: Sintetizador de audio Web Audio API procedural para sonido arcade.
+- `src/main.js`: Integración de `airGameAPI`, actualización en frame loop, cableado de modal y exposición en `window`.
+- `index.html`: Botón de cabecera `🎮 Air Games` y modal dialog arcade con selector de juegos.
+- `src/style.css`: Estilizado futurista con glassmorphism, botones arcade y contenedor responsivo.
+- `test/test-air-games.js`: Suite automatizada de 20 tests unitarios y de integración de la plataforma de juegos.
 
 ## Verification
-- `test/test-object-perception.js`: **32/32 tests pasados exitosamente**:
-  - Persistencia de `object-001` a través de frames sucesivos.
-  - Cálculo de velocidad cinemática suave.
-  - Retención de tracking durante oclusión por agarre de mano (37% occluded, 63% visible).
-  - Predicción *dead-reckoning* durante oclusión completa y reasociación limpia.
-  - Ingestión completa en `SpatialWorldModel`.
-- `npm run build`: Compilación exitosa en 472ms, 0 errores.
-- Chrome DevTools MCP Runtime:
-  - Ingestión de `object-001` verificada con actualización en vivo del HUD (`OBJECT #001`, `ACTIVE 94%`, `31% Occlusion`) y renderizado del rig 3D con migas de pan.
+- `test/test-air-games.js`: **20/20 tests pasados (100%)**:
+  - Emisión de eventos `hand.move` y cálculo cinemático.
+  - Detección de tajos de alta velocidad (`hand.slash`) y cálculo de velocidad de corte.
+  - Algoritmo de colisión de corte `checkLineCircleIntersection`.
+  - Transición fluida entre Pong, Fruit Ninja y Basketball.
+  - Físicas de lanzamiento de baloncesto y corte de frutas.
+- `test/test-object-perception.js`: **32/32 tests pasados (100%)** (sin regresiones).
+- `npm run build`: Compilación exitosa en 299 ms sin advertencias ni errores.
+- Chrome DevTools MCP:
+  - Apertura interactiva del modal `games-lab-modal` verificada con captura de pantalla.
+  - Renderizado en vivo de Air Pong, Fruit Ninja y Basketball.
 
 ## Repository
 - **GitHub:** [https://github.com/Breacorp/Air_gesture](https://github.com/Breacorp/Air_gesture)
 - **Branch:** `main`
-- **Latest Commit:** `40d880c`
+- **Latest Commit:** `2723ab7`
