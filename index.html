@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Air Gesture // Control Center (macOS Spatial Input Engine)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- Background Video for AR Passthrough Mode -->
+      <video id="webcam-video" playsinline autoplay muted></video>
+      <div id="ar-overlay-scrim"></div>
+
+      <!-- 3D Three.js Hand Visualizer Canvas Container -->
+      <div id="viewport-3d"></div>
+
+      <!-- Air Gesture Top Navigation Bar -->
+      <header class="top-nav">
+        <div class="nav-brand">
+          <div class="logo-mark">
+            <span class="logo-dot"></span>
+            <span class="logo-ring"></span>
+          </div>
+          <div class="brand-text">
+            <span class="brand-title">Air Gesture</span>
+            <span class="brand-subtitle">Control Center • macOS Background Engine</span>
+          </div>
+        </div>
+
+        <div class="nav-telemetry">
+          <div class="stat-pill">
+            <span class="stat-label">ENGINE</span>
+            <span id="fps-counter" class="stat-value text-accent">0 FPS</span>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-label">LATENCIA</span>
+            <span id="latency-counter" class="stat-value">0 ms</span>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-label">TRACKER</span>
+            <span id="hands-badge" class="badge badge-idle">0 Manos</span>
+          </div>
+        </div>
+
+        <div class="nav-actions">
+          <button id="btn-toggle-ar" class="btn btn-secondary active">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+            <span id="ar-label">Modo AR</span>
+          </button>
+
+          <button id="btn-calibrate-z" class="btn btn-primary" title="Calibra el plano Z de trabajo según la distancia actual de tu mano">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="m4.93 4.93 4.24 4.24"/>
+              <path d="m14.83 9.17 4.24-4.24"/>
+              <path d="m14.83 14.83 4.24 4.24"/>
+              <path d="m9.17 14.83-4.24 4.24"/>
+            </svg>
+            <span>Calibrar Z</span>
+          </button>
+
+          <button id="btn-toggle-mirror" class="btn btn-icon" title="Alternar modo espejo">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="16 3 21 3 21 8"/>
+              <line x1="4" y1="20" x2="21" y2="3"/>
+              <polyline points="21 16 21 21 16 21"/>
+              <line x1="15" y1="15" x2="21" y2="21"/>
+              <polyline points="4 8 4 3 9 3"/>
+              <polyline points="9 21 4 21 4 16"/>
+            </svg>
+          </button>
+
+          <button id="btn-swap-hands" class="btn btn-secondary" title="Invertir asignación Mano Izquierda / Derecha">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M7 16V4M7 4L3 8M7 4L11 8M17 8V20M17 20L21 16M17 20L13 16"/>
+            </svg>
+            <span id="swap-hands-label">Swap L/R</span>
+          </button>
+
+          <div class="system-status-pill status-off" id="system-status-pill" title="Estado de Entrada del Sistema Operativo">
+            <span class="status-pulse-dot" id="status-pulse-dot"></span>
+            <span class="status-pill-text" id="status-pill-text">AIR GESTURE OFF</span>
+          </div>
+
+          <button id="btn-toggle-macos" class="btn btn-secondary btn-macos" title="Activar/Desactivar control real del cursor en macOS (Failsafe: ESC)">
+            <span class="macos-indicator"></span>
+            <span id="macos-label">Control macOS: Off</span>
+          </button>
+
+          <button id="btn-toggle-studio" class="btn btn-primary btn-studio" title="Abrir Air 3D Studio (Manipulador Holográfico Tony Stark)">
+            <span class="studio-icon">🔮</span>
+            <span id="studio-btn-label">Air 3D Studio</span>
+          </button>
+
+          <button id="btn-toggle-physics" class="btn btn-secondary btn-physics" title="Abrir Air Physics Lab (Motor de Física Rígida y Lanzamientos Espaciales)">
+            <span class="physics-icon">⚛️</span>
+            <span id="physics-btn-label">Air Physics Lab</span>
+          </button>
+
+          <button id="btn-compact-mode" class="btn btn-secondary" title="Minimizar UI a HUD compacto de segundo plano">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 14 10 14 10 20"/>
+              <polyline points="20 10 14 10 14 4"/>
+              <line x1="14" y1="10" x2="21" y2="3"/>
+              <line x1="3" y1="21" x2="10" y2="14"/>
+            </svg>
+            <span id="compact-label">Modo Fondo</span>
+          </button>
+
+          <button id="btn-toggle-json" class="btn btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="16 18 22 12 16 6"/>
+              <polyline points="8 6 2 12 8 18"/>
+            </svg>
+            <span>Contrato JSON</span>
+          </button>
+
+          <button id="btn-toggle-diagnostics" class="btn btn-secondary" title="Abrir/Cerrar panel de Diagnóstico de Señal, Jitter y Pruebas">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 3v18h18"/>
+              <path d="m19 9-5 5-4-4-3 3"/>
+            </svg>
+            <span id="diagnostics-btn-label">Diagnóstico</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Profile Selector Sub-bar -->
+      <nav class="profile-nav-bar" id="profile-nav-bar">
+        <div class="profile-nav-inner">
+          <div class="profile-nav-label">
+            <span class="profile-nav-indicator"></span>
+            <span>PERFIL ACTIVO:</span>
+          </div>
+          <div class="profile-btn-group" id="profile-btn-group">
+            <button class="btn-profile active" data-profile="air_touch" id="btn-profile-air-touch">
+              <span class="btn-profile-icon">🖐️</span>
+              <span class="btn-profile-title">Air Touch</span>
+              <span class="badge-mini">Trackpad</span>
+            </button>
+            <button class="btn-profile" data-profile="universal" id="btn-profile-universal">
+              <span class="btn-profile-icon">🖥️</span>
+              <span class="btn-profile-title">Universal Desktop</span>
+              <span class="badge-mini">macOS</span>
+            </button>
+            <button class="btn-profile" data-profile="google_earth" id="btn-profile-earth">
+              <span class="btn-profile-icon">🌍</span>
+              <span class="btn-profile-title">Google Earth 3D</span>
+              <span class="badge-mini">Mapas</span>
+            </button>
+            <button class="btn-profile" data-profile="media" id="btn-profile-media">
+              <span class="btn-profile-icon">🎵</span>
+              <span class="btn-profile-title">Media / Música</span>
+              <span class="badge-mini">Spotify/VLC</span>
+            </button>
+            <button class="btn-profile" data-profile="game" id="btn-profile-game">
+              <span class="btn-profile-icon">🎮</span>
+              <span class="btn-profile-title">Gaming WASD</span>
+              <span class="badge-mini">Virtual FPS</span>
+            </button>
+            <button class="btn-profile" data-profile="blender" id="btn-profile-blender">
+              <span class="btn-profile-icon">🎨</span>
+              <span class="btn-profile-title">Blender 3D</span>
+              <span class="badge-mini">3D Suite</span>
+            </button>
+          </div>
+          <div class="pointer-mode-pill" id="nav-mode-toggles">
+            <span class="pointer-mode-label">PUNTERO:</span>
+            <button id="btn-nav-mode-rel" class="btn-mode active" title="Modo Relativo (Trackpad Aéreo)">Relativo</button>
+            <button id="btn-nav-mode-abs" class="btn-mode" title="Modo Absoluto (Apuntado Directo 1:1)">Absoluto</button>
+            <button id="btn-nav-mode-auto" class="btn-mode" title="Modo Auto (Recentrado Inteligente)">Auto</button>
+          </div>
+          <div class="profile-guide-chip" id="profile-guide-chip">
+            <span class="guide-chip-icon">💡</span>
+            <span id="profile-guide-text" class="guide-chip-text">Air Touch: ☝️ Cursor • 🤏 Click/Drag • ✌️/✋ Scroll • 🖐️🖐️ Zoom • 🙌 Atajos</span>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Floating Compact Background HUD (Visible when minimizing UI) -->
+      <div id="compact-hud" class="compact-hud hidden">
+        <div class="compact-hud-left">
+          <span class="compact-dot"></span>
+          <span class="compact-title">Air Gesture Activo</span>
+          <span id="compact-profile-badge" class="badge-mini">Universal Desktop</span>
+          <span id="compact-fps-badge" class="font-mono text-xs">60 FPS</span>
+        </div>
+        <div class="compact-hud-right">
+          <span id="compact-gesture-hint" class="compact-hint text-xs text-muted">Listo para controlar macOS</span>
+          <button id="btn-restore-ui" class="btn btn-xs btn-primary">Restaurar Consola</button>
+        </div>
+      </div>
+
+      <!-- Air 3D Studio Holographic CAD Console (Floating HUD) -->
+      <div id="studio-hud" class="studio-hud glass-card hidden">
+        <div class="studio-hud-header">
+          <div class="studio-brand">
+            <span class="studio-badge-pulse"></span>
+            <span class="studio-title">AIR 3D STUDIO</span>
+            <span class="studio-mode-tag">Holographic CAD</span>
+          </div>
+          <button id="btn-close-studio" class="btn-close-hud" title="Cerrar Studio">✕</button>
+        </div>
+
+        <!-- Model Selector & File Upload -->
+        <div class="studio-section">
+          <div class="studio-section-title">MODELO HOLOGRÁFICO</div>
+          <div class="studio-model-selector">
+            <button class="btn-studio-preset active" data-preset="reactor">⚡ Reactor Arc</button>
+            <button class="btn-studio-preset" data-preset="turbine">✈️ Turbina Jet</button>
+            <button class="btn-studio-preset" data-preset="arm">🦾 Brazo CAD</button>
+          </div>
+          <div class="studio-upload-box" id="studio-dropzone">
+            <input type="file" id="studio-file-input" accept=".stl,.obj" class="hidden-file-input">
+            <button id="btn-studio-upload" class="btn btn-secondary btn-xs btn-full">
+              <span>📁 Cargar archivo .STL / .OBJ</span>
+            </button>
+            <span class="studio-drop-hint">o arrastra un archivo .STL / .OBJ aquí</span>
+          </div>
+        </div>
+
+        <!-- CAD Model Telemetry -->
+        <div class="studio-section">
+          <div class="studio-section-title">TELEMETRÍA CAD</div>
+          <div class="studio-telemetry-grid">
+            <div class="telemetry-item">
+              <span class="telemetry-item-lbl">MODELO</span>
+              <span id="studio-meta-name" class="telemetry-item-val font-mono">Reactor Arc</span>
+            </div>
+            <div class="telemetry-item">
+              <span class="telemetry-item-lbl">FORMATO</span>
+              <span id="studio-meta-format" class="telemetry-item-val font-mono">Procedural CAD</span>
+            </div>
+            <div class="telemetry-item">
+              <span class="telemetry-item-lbl">POLÍGONOS</span>
+              <span id="studio-meta-tris" class="telemetry-item-val font-mono text-accent">14,280</span>
+            </div>
+            <div class="telemetry-item">
+              <span class="telemetry-item-lbl">VÉRTICES</span>
+              <span id="studio-meta-verts" class="telemetry-item-val font-mono">8,640</span>
+            </div>
+            <div class="telemetry-item col-span-2">
+              <span class="telemetry-item-lbl">DIMENSIONES (X × Y × Z)</span>
+              <span id="studio-meta-dims" class="telemetry-item-val font-mono text-cyan">160 × 160 × 80 mm</span>
+            </div>
+            <div class="telemetry-item">
+              <span class="telemetry-item-lbl">ESCALA</span>
+              <span id="studio-meta-scale" class="telemetry-item-val font-mono">1.00x</span>
+            </div>
+            <div class="telemetry-item">
+              <span class="telemetry-item-lbl">ESTADO GRAB</span>
+              <span id="studio-grab-state" class="badge-fsm state-idle">LIBRE</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Shading & Rendering Modes -->
+        <div class="studio-section">
+          <div class="studio-section-title">MODO DE VISUALIZACIÓN</div>
+          <div class="studio-shading-group">
+            <button class="btn-shading active" data-shading="hologram">🔮 Holograma</button>
+            <button class="btn-shading" data-shading="cad">⚙️ Sólido CAD</button>
+            <button class="btn-shading" data-shading="xray">👁️ Rayos X</button>
+            <button class="btn-shading" data-shading="wireframe">📐 Wireframe</button>
+          </div>
+        </div>
+
+        <!-- Exploded View & Transformations -->
+        <div class="studio-section">
+          <div class="studio-section-title">DESPIECE (EXPLODED VIEW)</div>
+          <div class="studio-slider-wrap">
+            <input type="range" id="slider-exploded" min="0" max="1" step="0.02" value="0">
+            <div class="slider-labels">
+              <span>Ensamblado</span>
+              <span id="lbl-exploded-pct" class="font-mono">0%</span>
+              <span>Despiece</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Studio Actions -->
+        <div class="studio-actions-row">
+          <button id="btn-studio-autorotate" class="btn btn-secondary btn-xs">
+            <span>🔄 Auto-Giro: Off</span>
+          </button>
+          <button id="btn-studio-reset" class="btn btn-secondary btn-xs">
+            <span>🎯 Centrar y Reset</span>
+          </button>
+        </div>
+
+        <!-- Spatial Gesture Guide for Studio -->
+        <div class="studio-gesture-guide">
+          <div class="guide-item">
+            <span class="guide-icon">☝️</span>
+            <span><strong>Apuntar:</strong> Rayo láser 3D sobre el modelo</span>
+          </div>
+          <div class="guide-item">
+            <span class="guide-icon">🤏</span>
+            <span><strong>Pinch + Mover:</strong> Agarrar y trasladar (X, Y y Profundidad Z)</span>
+          </div>
+          <div class="guide-item">
+            <span class="guide-icon">✋✋</span>
+            <span><strong>Dos Manos:</strong> Separar = Escala • Girar = Rotación 360°</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Air Physics Lab Sandbox Console (Floating HUD) -->
+      <div id="physics-hud" class="physics-hud glass-card hidden">
+        <div class="studio-hud-header">
+          <div class="studio-brand">
+            <span class="physics-badge-pulse"></span>
+            <span class="studio-title">AIR PHYSICS LAB</span>
+            <span class="physics-mode-tag">Rigid Dynamics</span>
+          </div>
+          <button id="btn-close-physics" class="btn-close-hud" title="Cerrar Physics Lab">✕</button>
+        </div>
+
+        <!-- Spawner Controls -->
+        <div class="studio-section">
+          <div class="studio-section-title">CREAR CUERPOS RÍGIDOS</div>
+          <div class="studio-model-selector">
+            <button class="btn-studio-preset" id="btn-spawn-cube">🧊 Cubo</button>
+            <button class="btn-studio-preset" id="btn-spawn-sphere">🔮 Esfera</button>
+            <button class="btn-studio-preset" id="btn-spawn-cylinder">🧪 Cilindro</button>
+          </div>
+        </div>
+
+        <!-- Gravity Environment Controls -->
+        <div class="studio-section">
+          <div class="studio-section-title">CAMPO GRAVITACIONAL</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+            <button class="btn-physics-gravity active" data-gravity="earth">🌍 Tierra (9.8m)</button>
+            <button class="btn-physics-gravity" data-gravity="moon">🌙 Luna (1.6m)</button>
+            <button class="btn-physics-gravity" data-gravity="zero">🪐 Gravedad Cero</button>
+            <button class="btn-physics-gravity" data-gravity="inverted">🧲 Invertida</button>
+          </div>
+        </div>
+
+        <!-- Restitution / Elasticity Slider -->
+        <div class="studio-section">
+          <div class="studio-section-title">ELASTICIDAD / REBOTE</div>
+          <div class="studio-slider-wrap">
+            <input type="range" id="slider-restitution" min="0.1" max="0.95" step="0.05" value="0.72">
+            <div class="slider-labels">
+               <span>Rígido (0.1)</span>
+               <span id="lbl-restitution-val" class="font-mono" style="color: var(--accent-magenta);">72%</span>
+               <span>Super Rebote (0.95)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Telemetry Grid -->
+        <div class="studio-section">
+          <div class="studio-section-title">TELEMETRÍA CINEMÁTICA</div>
+          <div class="studio-telemetry-grid">
+            <div class="telemetry-item">
+              <span class="telemetry-item-lbl">CUERPOS</span>
+              <span id="physics-stat-count" class="telemetry-item-val font-mono text-cyan">5</span>
+            </div>
+            <div class="telemetry-item">
+              <span class="telemetry-item-lbl">VEL. ÚLTIMO TIRO</span>
+              <span id="physics-stat-speed" class="telemetry-item-val font-mono" style="color: var(--accent-magenta);">0 m/s</span>
+            </div>
+            <div class="telemetry-item col-span-2">
+              <span class="telemetry-item-lbl">OBJETO SUJETO</span>
+              <span id="physics-stat-held" class="telemetry-item-val font-mono">Ninguno</span>
+            </div>
+            <div class="telemetry-item col-span-2">
+              <span class="telemetry-item-lbl">GRAVEDAD</span>
+              <span id="physics-stat-gravity" class="telemetry-item-val font-mono text-accent">🌍 Tierra (9.8 m/s²)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="studio-actions-row">
+          <button id="btn-physics-reset" class="btn btn-secondary btn-xs">
+            <span>🎯 Reiniciar Objetos</span>
+          </button>
+          <button id="btn-physics-clear" class="btn btn-secondary btn-xs">
+            <span>🗑️ Limpiar Arena</span>
+          </button>
+        </div>
+
+        <!-- Spatial Gesture Guide for Physics -->
+        <div class="studio-gesture-guide">
+          <div class="guide-item">
+            <span class="guide-icon">🤏</span>
+            <span><strong>Pinch + Mover:</strong> Agarra el objeto más cercano.</span>
+          </div>
+          <div class="guide-item">
+            <span class="guide-icon">🚀</span>
+            <span><strong>Soltar en movimiento:</strong> Lanza con inercia filtrada temporalmente (120ms).</span>
+          </div>
+          <div class="guide-item">
+            <span class="guide-icon">✋✋</span>
+            <span><strong>Bimanual:</strong> 2 manos agarran y separan para escalar el objeto.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Telemetry Stage -->
+      <main class="telemetry-stage">
+        <!-- Left Hand Telemetry Card -->
+        <section id="hand-card-left" class="glass-card hand-card hand-idle">
+          <div class="card-header">
+            <div class="hand-identity">
+              <span class="hand-dot hand-dot-left"></span>
+              <span class="hand-title">Mano Izquierda</span>
+            </div>
+            <span id="left-confidence" class="confidence-tag">0%</span>
+          </div>
+
+          <!-- Calibrated Spatial Depth Meter (Relative Camera Depth) -->
+          <div class="metric-group">
+            <div class="metric-title-row">
+              <span class="metric-label">PROFUNDIDAD RELATIVA CÁMARA (Z)</span>
+              <span id="left-depth-cm" class="metric-value font-mono">Z: 0.00</span>
+            </div>
+            <div class="meter-track">
+              <div id="left-depth-bar" class="meter-fill meter-fill-purple" style="width: 50%"></div>
+            </div>
+            <div class="metric-sub">
+              <span>Z Relativo: <strong id="left-depth-rel" class="font-mono">0.00</strong></span>
+              <span class="sub-hint">Métrica normalizada [-1, 1]</span>
+            </div>
+          </div>
+
+          <!-- 3D Palm Orientation -->
+          <div class="metric-group">
+            <div class="metric-title-row">
+              <span class="metric-label">ORIENTACIÓN Y NORMAL PALMA</span>
+              <span id="left-facing" class="text-muted text-xs">--</span>
+            </div>
+            <div class="angles-grid">
+              <div class="angle-box">
+                <span class="angle-label">ROLL</span>
+                <span id="left-roll" class="angle-val font-mono">0°</span>
+              </div>
+              <div class="angle-box">
+                <span class="angle-label">PITCH</span>
+                <span id="left-pitch" class="angle-val font-mono">0°</span>
+              </div>
+              <div class="angle-box">
+                <span class="angle-label">YAW</span>
+                <span id="left-yaw" class="angle-val font-mono">0°</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Finger Flexion Matrix -->
+          <div class="metric-group">
+            <div class="metric-title-row">
+              <span class="metric-label">FLEXIÓN ARTICULAR DEDOS</span>
+              <span class="sub-hint">Ángulo PIP / % Flex</span>
+            </div>
+            <div class="finger-list">
+              <div class="finger-row">
+                <span class="finger-name">Pulgar</span>
+                <div class="meter-track mini"><div id="left-bar-thumb" class="meter-fill meter-fill-purple" style="width: 0%"></div></div>
+                <span id="left-pct-thumb" class="finger-pct font-mono">0%</span>
+                <span id="left-angle-thumb" class="finger-angle font-mono">0°</span>
+              </div>
+              <div class="finger-row">
+                <span class="finger-name">Índice</span>
+                <div class="meter-track mini"><div id="left-bar-index" class="meter-fill meter-fill-purple" style="width: 0%"></div></div>
+                <span id="left-pct-index" class="finger-pct font-mono">0%</span>
+                <span id="left-angle-index" class="finger-angle font-mono">0°</span>
+              </div>
+              <div class="finger-row">
+                <span class="finger-name">Medio</span>
+                <div class="meter-track mini"><div id="left-bar-middle" class="meter-fill meter-fill-purple" style="width: 0%"></div></div>
+                <span id="left-pct-middle" class="finger-pct font-mono">0%</span>
+                <span id="left-angle-middle" class="finger-angle font-mono">0°</span>
+              </div>
+              <div class="finger-row">
+                <span class="finger-name">Anular</span>
+                <div class="meter-track mini"><div id="left-bar-ring" class="meter-fill meter-fill-purple" style="width: 0%"></div></div>
+                <span id="left-pct-ring" class="finger-pct font-mono">0%</span>
+                <span id="left-angle-ring" class="finger-angle font-mono">0°</span>
+              </div>
+              <div class="finger-row">
+                <span class="finger-name">Meñique</span>
+                <div class="meter-track mini"><div id="left-bar-pinky" class="meter-fill meter-fill-purple" style="width: 0%"></div></div>
+                <span id="left-pct-pinky" class="finger-pct font-mono">0%</span>
+                <span id="left-angle-pinky" class="finger-angle font-mono">0°</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Kinematics & Pinch -->
+          <div class="metric-group">
+            <div class="metric-title-row">
+              <span class="metric-label">VELOCIDAD MUÑECA</span>
+              <span id="left-speed" class="metric-value font-mono">0.00 u/s</span>
+            </div>
+            <div class="metric-title-row mt-sm">
+              <span class="metric-label">FUERZA PINCH</span>
+            </div>
+            <div class="meter-track">
+              <div id="left-pinch-strength-bar" class="meter-fill meter-fill-yellow" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <!-- Emergent Pose Badges -->
+          <div class="poses-group">
+            <span class="metric-label">GESTOS EMERGENTES</span>
+            <div class="badges-wrap">
+              <span id="left-badge-palm" class="badge-pose">PALMA ABIERTA</span>
+              <span id="left-badge-pinch" class="badge-pose">PINCH</span>
+              <span id="left-badge-point" class="badge-pose">APUNTAR</span>
+              <span id="left-badge-fist" class="badge-pose">PUÑO / AGARRE</span>
+              <span id="left-badge-peace" class="badge-pose">PAZ</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Center Crosshair (Pure Background Visual) -->
+        <div class="center-crosshair">
+          <div class="crosshair-ring"></div>
+          <div class="crosshair-lines"></div>
+          <span class="crosshair-text">VOLUMEN ESPACIAL ACTIVO</span>
+        </div>
+
+        <!-- Center Stage (Diagnostics & Testing Dock - Hidden by default) -->
+        <div class="center-stage hidden-diagnostics" id="center-stage">
+          <!-- Phase 2.1 Stabilization Diagnostics Card -->
+          <div class="center-diagnostics-card glass-card">
+            <div class="dock-header">
+              <span class="dock-title">Diagnóstico de Señal & Jitter</span>
+              <div class="mode-toggles">
+                <button id="btn-mode-rel" class="btn btn-xs active">Relativo</button>
+                <button id="btn-mode-abs" class="btn btn-xs">Absoluto</button>
+                <button id="btn-mode-auto" class="btn btn-xs">Auto</button>
+              </div>
+              <button id="btn-close-diagnostics" class="btn-close-hud" title="Cerrar Diagnóstico">✕</button>
+            </div>
+
+            <!-- Pointer Quality Score Metric -->
+            <div class="metric-group" style="padding: 6px 10px;">
+              <div class="metric-title-row">
+                <span class="metric-label">CALIDAD DE APUNTADO</span>
+                <span class="font-mono text-accent"><strong id="diag-quality-score">--%</strong> <span id="diag-quality-rating" class="text-xs text-muted"></span></span>
+              </div>
+              <div class="meter-track" style="margin-top: 4px;">
+                <div id="diag-quality-bar" class="meter-fill meter-fill-teal" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <!-- Diagnostics Matrix -->
+            <div class="diag-grid">
+              <div class="diag-col">
+                <span class="diag-label">RAW (MediaPipe)</span>
+                <div class="diag-val font-mono">X: <span id="diag-raw-x">0.0000</span></div>
+                <div class="diag-val font-mono">Y: <span id="diag-raw-y">0.0000</span></div>
+              </div>
+              <div class="diag-col">
+                <span class="diag-label">FILTERED (One-Euro)</span>
+                <div class="diag-val font-mono text-accent">X: <span id="diag-filt-x">0.0000</span></div>
+                <div class="diag-val font-mono text-accent">Y: <span id="diag-filt-y">0.0000</span></div>
+              </div>
+              <div class="diag-col">
+                <span class="diag-label">CURSOR (Pantalla)</span>
+                <div class="diag-val font-mono">X: <span id="diag-cursor-x">0px</span></div>
+                <div class="diag-val font-mono">Y: <span id="diag-cursor-y">0px</span></div>
+              </div>
+              <div class="diag-col">
+                <span class="diag-label">JITTER (Varianza)</span>
+                <div class="diag-val font-mono text-xs">Raw: <span id="diag-jitter-raw">0.0000</span></div>
+                <div class="diag-val font-mono text-xs text-accent">Filt: <span id="diag-jitter-filt">0.0000</span></div>
+                <div class="diag-pct font-mono text-accent" id="diag-jitter-pct">-0%</div>
+              </div>
+            </div>
+
+            <!-- Controls row -->
+            <div class="diag-controls-row">
+              <button id="btn-calib-neutral" class="btn btn-secondary btn-xs" title="Aprender posición de descanso cómoda">
+                <span>🎯 Calibrar Centro Neutral</span>
+              </button>
+              <span id="diag-calib-status" class="text-xs text-muted">Sin calibración previa</span>
+            </div>
+
+            <!-- Live filter sliders -->
+            <div class="filter-sliders-row">
+              <div class="slider-group">
+                <span class="slider-lbl">Filtro Cutoff: <strong id="lbl-cutoff" class="font-mono">0.4 Hz</strong></span>
+                <input type="range" id="slider-cutoff" min="0.1" max="2.5" step="0.1" value="0.4">
+              </div>
+              <div class="slider-group">
+                <span class="slider-lbl">Filtro Beta: <strong id="lbl-beta" class="font-mono">0.018</strong></span>
+                <input type="range" id="slider-beta" min="0.001" max="0.04" step="0.001" value="0.018">
+              </div>
+            </div>
+          </div>
+
+          <!-- Spatial World Model & Perception Control Card (Fase 1.5) -->
+          <div class="center-diagnostics-card glass-card" id="spatial-world-card">
+            <div class="dock-header">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="pulse-indicator" style="background:var(--accent-cyan); width:7px; height:7px;"></span>
+                <span class="dock-title">SPATIAL WORLD MODEL</span>
+              </div>
+              <span id="world-entities-count" class="badge badge-active font-mono" style="font-size:10px;">0 ENTIDADES</span>
+            </div>
+
+            <!-- Perception Trackers Control Toolbar -->
+            <div class="perception-toolbar" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 2px;">
+              <button id="btn-toggle-body-tracker" class="btn btn-secondary btn-xs" title="Activar/Desactivar Pose Corporal (Fase 2)">
+                <span>👤 Cuerpo: <strong id="lbl-body-tracker-state" class="text-muted">OFF</strong></span>
+              </button>
+              <button id="btn-toggle-object-tracker" class="btn btn-secondary btn-xs" title="Activar/Desactivar Tracking de Objetos Físicos (Fase 3)">
+                <span>🟠 Objeto: <strong id="lbl-object-tracker-state" class="text-muted">OFF</strong></span>
+              </button>
+              <select id="select-object-color" class="btn-xs" style="background:#0a0f1d; color:#fff; border:1px solid #ffffff1a; border-radius:6px; padding:0 6px; font-size:11px; height:28px;">
+                <option value="orange">🟠 Naranja</option>
+                <option value="green">🟢 Verde</option>
+                <option value="blue">🔵 Azul</option>
+                <option value="magenta">🟣 Magenta</option>
+              </select>
+            </div>
+
+            <!-- Multimodal Spatial Relationships Chip -->
+            <div style="background:#0000004d; border:1px solid #ffffff0d; border-radius:6px; padding:5px 8px; margin-bottom:4px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                <span style="font-size:9px; font-weight:700; color:var(--text-muted); letter-spacing:0.5px;">RELACIONES ESPACIALES ACTIVAS</span>
+              </div>
+              <div id="world-relations-chip" style="display:flex; gap:6px; flex-wrap:wrap; font-size:10px; min-height:16px; align-items:center;">
+                <span class="text-muted text-xs">Sin relaciones activas</span>
+              </div>
+            </div>
+
+            <!-- Entities Telemetry Matrix -->
+            <div class="world-entities-grid" id="world-entities-container" style="display:flex; flex-direction:column; gap:8px;">
+              <!-- Hand Left Entity -->
+              <div class="world-entity-card" id="entity-card-hand-left" style="background:rgba(255,0,127,0.06); border:1px solid rgba(255,0,127,0.2); border-radius:8px; padding:8px 10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                  <span style="font-size:11px; font-weight:700; color:var(--accent-magenta);">HAND Left</span>
+                  <span id="entity-status-hand-left" class="badge-mini" style="color:var(--text-muted);">INACTIVO</span>
+                </div>
+                <div class="diag-grid" style="grid-template-columns: repeat(4, 1fr); padding:4px 6px;">
+                  <div class="diag-col"><span class="diag-label">POS (X,Y,Z)</span><span id="entity-pos-hand-left" class="diag-val font-mono">--</span></div>
+                  <div class="diag-col"><span class="diag-label">VELOCIDAD</span><span id="entity-vel-hand-left" class="diag-val font-mono">--</span></div>
+                  <div class="diag-col"><span class="diag-label">ACELERACIÓN</span><span id="entity-acc-hand-left" class="diag-val font-mono">--</span></div>
+                  <div class="diag-col"><span class="diag-label">CONF / EDAD</span><span id="entity-meta-hand-left" class="diag-val font-mono">--</span></div>
+                </div>
+              </div>
+
+              <!-- Hand Right Entity -->
+              <div class="world-entity-card" id="entity-card-hand-right" style="background:rgba(0,245,212,0.06); border:1px solid rgba(0,245,212,0.2); border-radius:8px; padding:8px 10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                  <span style="font-size:11px; font-weight:700; color:var(--accent-cyan);">HAND Right</span>
+                  <span id="entity-status-hand-right" class="badge-mini" style="color:var(--text-muted);">INACTIVO</span>
+                </div>
+                <div class="diag-grid" style="grid-template-columns: repeat(4, 1fr); padding:4px 6px;">
+                  <div class="diag-col"><span class="diag-label">POS (X,Y,Z)</span><span id="entity-pos-hand-right" class="diag-val font-mono">--</span></div>
+                  <div class="diag-col"><span class="diag-label">VELOCIDAD</span><span id="entity-vel-hand-right" class="diag-val font-mono">--</span></div>
+                  <div class="diag-col"><span class="diag-label">ACELERACIÓN</span><span id="entity-acc-hand-right" class="diag-val font-mono">--</span></div>
+                  <div class="diag-col"><span class="diag-label">CONF / EDAD</span><span id="entity-meta-hand-right" class="diag-val font-mono">--</span></div>
+                </div>
+              </div>
+
+              <!-- Body Entity -->
+              <div class="world-entity-card" id="entity-card-body" style="background:rgba(255,209,102,0.06); border:1px solid rgba(255,209,102,0.2); border-radius:8px; padding:8px 10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                  <span style="font-size:11px; font-weight:700; color:var(--accent-yellow);">BODY Pose</span>
+                  <span id="entity-status-body" class="badge-mini" style="color:var(--text-muted);">DISABLED</span>
+                </div>
+                <div class="diag-grid" style="grid-template-columns: repeat(4, 1fr); padding:4px 6px;">
+                  <div class="diag-col"><span class="diag-label">TORSO (X,Y,Z)</span><span id="entity-pos-body" class="diag-val font-mono">--</span></div>
+                  <div class="diag-col"><span class="diag-label">VELOCIDAD</span><span id="entity-vel-body" class="diag-val font-mono">--</span></div>
+                  <div class="diag-col"><span class="diag-label">ENVERGADURA</span><span id="entity-scale-body" class="diag-val font-mono">--</span></div>
+                  <div class="diag-col"><span class="diag-label">LANDMARKS</span><span id="entity-meta-body" class="diag-val font-mono">33 pts</span></div>
+                </div>
+              </div>
+
+              <!-- Object Prop Entity -->
+              <div class="world-entity-card" id="entity-card-object" style="background:rgba(255,107,53,0.06); border:1px solid rgba(255,107,53,0.2); border-radius:8px; padding:8px 10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                  <span style="font-size:11px; font-weight:700; color:#ff6b35;">OBJECT Prop (Color Controller)</span>
+                  <span id="entity-status-object" class="badge-mini" style="color:var(--text-muted);">DISABLED</span>
+                </div>
+                <div class="diag-grid" style="grid-template-columns: repeat(4, 1fr); padding:4px 6px;">
+                  <div class="diag-col"><span class="diag-label">POS (X,Y,Z)</span><span id="entity-pos-object" class="diag-val font-mono">--</span></div>
+                  <div class="diag-col"><span class="diag-label">VELOCIDAD</span><span id="entity-vel-object" class="diag-val font-mono">--</span></div>
+                  <div class="diag-col"><span class="diag-label">TAMAÑO/RADIO</span><span id="entity-scale-object" class="diag-val font-mono">--</span></div>
+                  <div class="diag-col"><span class="diag-label">PÍXELES/CONF</span><span id="entity-meta-object" class="diag-val font-mono">--</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interactive Gesture Testing Dock -->
+          <div class="center-interactive-dock glass-card">
+            <div class="dock-header">
+              <span class="dock-title">Universal Spatial Engine</span>
+              <div class="dock-badges-wrap">
+                <span id="dock-intent-badge" class="badge-intent" title="Intención espacial detectada (Universal Intent)">INTENT: IDLE</span>
+                <span id="dock-context-badge" class="badge-context" title="Contexto espacial activo (Context Engine)">CTX: DESKTOP</span>
+              </div>
+            </div>
+            <div class="dock-body">
+              <button id="test-btn-click" class="test-target btn btn-primary">
+                <span>☝️🤏 Probar Click (<strong id="test-click-count">0</strong>)</span>
+              </button>
+              <div id="test-drag-box" class="test-target test-drag-card">
+                <span>🤏 Arrástrame (Pinch + Drag)</span>
+              </div>
+              <div id="test-scroll-container" class="test-target test-scroll-card">
+                <div class="scroll-content">
+                  <div>✌️ Dos dedos para Scroll</div>
+                  <div>• Finder / Safari</div>
+                  <div>• VS Code / Terminal</div>
+                  <div>• ModernOS Spatial</div>
+                  <div>• Three.js WebGL 3D</div>
+                  <div>• CoreGraphics Quartz</div>
+                  <div>• 60 FPS Suave</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Hand Telemetry Card -->
+        <section id="hand-card-right" class="glass-card hand-card hand-idle">
+          <div class="card-header">
+            <div class="hand-identity">
+              <span class="hand-dot hand-dot-right"></span>
+              <span class="hand-title">Mano Derecha</span>
+            </div>
+            <span id="right-confidence" class="confidence-tag">0%</span>
+          </div>
+
+          <!-- Calibrated Spatial Depth Meter (Relative Camera Depth) -->
+          <div class="metric-group">
+            <div class="metric-title-row">
+              <span class="metric-label">PROFUNDIDAD RELATIVA CÁMARA (Z)</span>
+              <span id="right-depth-cm" class="metric-value font-mono">Z: 0.00</span>
+            </div>
+            <div class="meter-track">
+              <div id="right-depth-bar" class="meter-fill meter-fill-teal" style="width: 50%"></div>
+            </div>
+            <div class="metric-sub">
+              <span>Z Relativo: <strong id="right-depth-rel" class="font-mono">0.00</strong></span>
+              <span class="sub-hint">Métrica normalizada [-1, 1]</span>
+            </div>
+          </div>
+
+          <!-- 3D Palm Orientation -->
+          <div class="metric-group">
+            <div class="metric-title-row">
+              <span class="metric-label">ORIENTACIÓN Y NORMAL PALMA</span>
+              <span id="right-facing" class="text-muted text-xs">--</span>
+            </div>
+            <div class="angles-grid">
+              <div class="angle-box">
+                <span class="angle-label">ROLL</span>
+                <span id="right-roll" class="angle-val font-mono">0°</span>
+              </div>
+              <div class="angle-box">
+                <span class="angle-label">PITCH</span>
+                <span id="right-pitch" class="angle-val font-mono">0°</span>
+              </div>
+              <div class="angle-box">
+                <span class="angle-label">YAW</span>
+                <span id="right-yaw" class="angle-val font-mono">0°</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Finger Flexion Matrix -->
+          <div class="metric-group">
+            <div class="metric-title-row">
+              <span class="metric-label">FLEXIÓN ARTICULAR DEDOS</span>
+              <span class="sub-hint">Ángulo PIP / % Flex</span>
+            </div>
+            <div class="finger-list">
+              <div class="finger-row">
+                <span class="finger-name">Pulgar</span>
+                <div class="meter-track mini"><div id="right-bar-thumb" class="meter-fill meter-fill-teal" style="width: 0%"></div></div>
+                <span id="right-pct-thumb" class="finger-pct font-mono">0%</span>
+                <span id="right-angle-thumb" class="finger-angle font-mono">0°</span>
+              </div>
+              <div class="finger-row">
+                <span class="finger-name">Índice</span>
+                <div class="meter-track mini"><div id="right-bar-index" class="meter-fill meter-fill-teal" style="width: 0%"></div></div>
+                <span id="right-pct-index" class="finger-pct font-mono">0%</span>
+                <span id="right-angle-index" class="finger-angle font-mono">0°</span>
+              </div>
+              <div class="finger-row">
+                <span class="finger-name">Medio</span>
+                <div class="meter-track mini"><div id="right-bar-middle" class="meter-fill meter-fill-teal" style="width: 0%"></div></div>
+                <span id="right-pct-middle" class="finger-pct font-mono">0%</span>
+                <span id="right-angle-middle" class="finger-angle font-mono">0°</span>
+              </div>
+              <div class="finger-row">
+                <span class="finger-name">Anular</span>
+                <div class="meter-track mini"><div id="right-bar-ring" class="meter-fill meter-fill-teal" style="width: 0%"></div></div>
+                <span id="right-pct-ring" class="finger-pct font-mono">0%</span>
+                <span id="right-angle-ring" class="finger-angle font-mono">0°</span>
+              </div>
+              <div class="finger-row">
+                <span class="finger-name">Meñique</span>
+                <div class="meter-track mini"><div id="right-bar-pinky" class="meter-fill meter-fill-teal" style="width: 0%"></div></div>
+                <span id="right-pct-pinky" class="finger-pct font-mono">0%</span>
+                <span id="right-angle-pinky" class="finger-angle font-mono">0°</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Kinematics & Pinch -->
+          <div class="metric-group">
+            <div class="metric-title-row">
+              <span class="metric-label">VELOCIDAD MUÑECA</span>
+              <span id="right-speed" class="metric-value font-mono">0.00 u/s</span>
+            </div>
+            <div class="metric-title-row mt-sm">
+              <span class="metric-label">FUERZA PINCH</span>
+            </div>
+            <div class="meter-track">
+              <div id="right-pinch-strength-bar" class="meter-fill meter-fill-yellow" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <!-- Emergent Pose Badges -->
+          <div class="poses-group">
+            <span class="metric-label">GESTOS EMERGENTES</span>
+            <div class="badges-wrap">
+              <span id="right-badge-palm" class="badge-pose">PALMA ABIERTA</span>
+              <span id="right-badge-pinch" class="badge-pose">PINCH</span>
+              <span id="right-badge-point" class="badge-pose">APUNTAR</span>
+              <span id="right-badge-fist" class="badge-pose">PUÑO / AGARRE</span>
+              <span id="right-badge-peace" class="badge-pose">PAZ</span>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- Bottom Collapsible JSON Contract Stream Terminal -->
+      <footer id="json-drawer" class="json-drawer hidden">
+        <div class="drawer-header">
+          <div class="drawer-title">
+            <span class="pulse-indicator"></span>
+            <span>Contrato Cinemático Desacoplado (Live Telemetry Event Stream)</span>
+          </div>
+          <div class="drawer-actions">
+            <button id="btn-pause-json" class="btn btn-xs">Pausar</button>
+            <button id="btn-copy-json" class="btn btn-xs">Copiar JSON</button>
+            <button id="btn-close-json" class="btn btn-xs btn-icon">✕</button>
+          </div>
+        </div>
+        <div class="drawer-body">
+          <pre id="json-stream-code" class="code-stream font-mono">Esperando detección de manos...</pre>
+        </div>
+      </footer>
+
+      <!-- Camera Start Overlay Modal -->
+      <div id="camera-modal" class="modal-backdrop">
+        <div class="glass-card modal-card">
+          <div class="modal-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#00f5d4" stroke-width="2">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+          </div>
+          <h2 class="modal-title">Iniciar Motion Engine</h2>
+          <p class="modal-desc">
+            El sistema procesará tu cámara frontal <strong>100% de forma local</strong> sin enviar frames a la nube, calculando la cinemática de 21 landmarks en 3D para ambas manos.
+          </p>
+          <button id="btn-start-camera" class="btn btn-primary btn-large">
+            <span>Permitir Cámara y Comenzar</span>
+          </button>
+          <div id="init-loader" class="init-loader hidden">
+            <div class="spinner"></div>
+            <span id="init-status-text">Cargando modelos locales de MediaPipe...</span>
+          </div>
+        </div>
+      </div>
+    <!-- Floating Emergency Failsafe Toast -->
+    <div id="failsafe-banner" class="failsafe-banner hidden">
+      <span class="failsafe-icon">🛑</span>
+      <span id="failsafe-text" class="failsafe-text">AIR GESTURE DESACTIVADO (EMERGENCIA: ✊+✊)</span>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
