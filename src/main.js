@@ -279,6 +279,7 @@ let latestRawLandmarksForCalibration = null;
 // Tracker Frame Pipeline
 tracker.setOnFrame((frameData) => {
   const { hands, worldModel, timestamp, stats, videoWidth, videoHeight } = frameData;
+  const now = timestamp || performance.now();
 
   // 1. Update Telemetry Stats
   hud.updateStats(stats);
@@ -380,29 +381,110 @@ tracker.setOnFrame((frameData) => {
   }
 
   // 9. Full Sensor View Rendering (Unconstrained Camera Sensor Overlays)
-  if (fullSensorView && fullSensorView.isEnabled) {
+  if (fullSensorView && fullSensorView.isActive) {
     fullSensorView.render({
       hands: kinematicData,
+      body: frameData.body,
+      face: frameData.face,
       worldModel,
+      stats: frameData.stats,
+      diagnostics: frameData.diagnostics,
       timestamp: now
     });
   }
 
+  // 10. Live DOM Update for AIR GESTURE — PERCEPTION DEBUG HUD
+  if (frameData.diagnostics) {
+    updatePerceptionDebugHUD(frameData.diagnostics);
+  }
+
   lastDetectedHands = currentFrameHands;
 });
+
+// DOM Telemetry References for AIR GESTURE — PERCEPTION DEBUG
+const dbgCamRes = document.getElementById('dbg-cam-res');
+const dbgCamFps = document.getElementById('dbg-cam-fps');
+const dbgHandLeft = document.getElementById('dbg-hand-left');
+const dbgHandRight = document.getElementById('dbg-hand-right');
+const dbgFace = document.getElementById('dbg-face');
+const dbgBody = document.getElementById('dbg-body');
+const dbgObject = document.getElementById('dbg-object');
+const dbgWorldEntities = document.getElementById('dbg-world-entities');
+
+function updatePerceptionDebugHUD(diag) {
+  if (!diag) return;
+
+  if (dbgCamRes) dbgCamRes.textContent = `${diag.camera?.width || 0} × ${diag.camera?.height || 0}`;
+  if (dbgCamFps) dbgCamFps.textContent = `FPS: ${diag.camera?.fps || 0}`;
+
+  if (dbgHandLeft) {
+    if (diag.hands?.left?.detected) {
+      dbgHandLeft.className = 'font-mono text-accent';
+      dbgHandLeft.textContent = `DETECTED (${diag.hands.left.landmarksCount} pts, conf: ${Math.round(diag.hands.left.confidence * 100)}%)`;
+    } else {
+      dbgHandLeft.className = 'font-mono text-muted';
+      dbgHandLeft.textContent = 'NOT DETECTED';
+    }
+  }
+
+  if (dbgHandRight) {
+    if (diag.hands?.right?.detected) {
+      dbgHandRight.className = 'font-mono text-accent';
+      dbgHandRight.textContent = `DETECTED (${diag.hands.right.landmarksCount} pts, conf: ${Math.round(diag.hands.right.confidence * 100)}%)`;
+    } else {
+      dbgHandRight.className = 'font-mono text-muted';
+      dbgHandRight.textContent = 'NOT DETECTED';
+    }
+  }
+
+  if (dbgFace) {
+    if (diag.face?.detected) {
+      dbgFace.className = 'font-mono text-magenta';
+      dbgFace.textContent = `DETECTED (${diag.face.landmarksCount} pts, pitch: ${diag.face.pitch}°, yaw: ${diag.face.yaw}°)`;
+    } else {
+      dbgFace.className = 'font-mono text-muted';
+      dbgFace.textContent = 'NOT DETECTED';
+    }
+  }
+
+  if (dbgBody) {
+    if (diag.body?.detected) {
+      dbgBody.className = 'font-mono text-yellow';
+      dbgBody.textContent = `DETECTED (${diag.body.landmarksCount} landmarks)`;
+    } else {
+      dbgBody.className = 'font-mono text-muted';
+      dbgBody.textContent = 'NOT DETECTED';
+    }
+  }
+
+  if (dbgObject) {
+    if (diag.object?.detected) {
+      dbgObject.className = 'font-mono text-orange';
+      dbgObject.textContent = `DETECTED (${diag.object.id}, ${diag.object.status}, conf: ${Math.round(diag.object.confidence * 100)}%)`;
+    } else {
+      dbgObject.className = 'font-mono text-muted';
+      dbgObject.textContent = 'NOT DETECTED';
+    }
+  }
+
+  if (dbgWorldEntities) {
+    dbgWorldEntities.textContent = `${diag.worldModel?.entitiesCount || 0}`;
+  }
+}
 
 // UI Event Listeners
 btnStartCamera.addEventListener('click', async () => {
   try {
     btnStartCamera.style.display = 'none';
     initLoader.classList.remove('hidden');
-    initStatusText.textContent = 'Inicializando HandLandmarker (WASM local)...';
+    initStatusText.textContent = 'Inicializando modelos (Manos, Cara, Cuerpo, Objetos)...';
 
     await tracker.initialize();
 
-    initStatusText.textContent = 'Conectando cámara web...';
+    initStatusText.textContent = 'Conectando cámara web (Sensor Completo 16:9)...';
     await tracker.startCamera(videoEl);
 
+    fullSensorView.setActive(true);
     cameraModal.classList.add('hidden');
   } catch (err) {
     console.error('Initialization error:', err);

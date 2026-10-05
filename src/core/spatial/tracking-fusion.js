@@ -89,6 +89,12 @@ export class TrackingFusion {
     if (body && body.missingFrames === 0) {
       this._fuseHandsAndBody(hands, body, timestamp);
     }
+
+    // 4. Surface <-> Object & Surface <-> Hand Fusion (Desk View & Tabletop Support)
+    const surfaces = this.worldModel.getEntitiesByType('surface');
+    if (surfaces.length > 0) {
+      this._fuseSurfacesAndEntities(surfaces, objects, hands, timestamp);
+    }
   }
 
   /**
@@ -320,6 +326,49 @@ export class TrackingFusion {
           this._emit('body:posture_changed', { posture: 't_pose', timestamp });
         }
       }
+    }
+  }
+
+  /**
+   * Evaluates Surface <-> Object and Surface <-> Hand spatial relations (e.g. Desk View)
+   */
+  _fuseSurfacesAndEntities(surfaces, objects, hands, timestamp) {
+    for (const surface of surfaces) {
+      if (surface.missingFrames > 0) continue;
+
+      const supportedObjects = [];
+      const deskY = surface.customProps?.plane?.height ?? (surface.position?.y || 0.0);
+
+      for (const obj of objects) {
+        if (obj.missingFrames > 0) continue;
+
+        const isHeld = obj.relations?.heldBy !== null && obj.relations?.heldBy !== undefined;
+        const objY = obj.position?.y !== undefined ? obj.position.y : 0;
+        const distToPlane = Math.abs(objY - deskY);
+
+        if (!isHeld && distToPlane <= 0.08) {
+          supportedObjects.push(obj.id);
+          obj.customProps.supportedBy = surface.id;
+
+          const speed = Math.hypot(obj.velocity?.x || 0, obj.velocity?.z || 0);
+          if (speed > 0.06) {
+            obj.customProps.surfaceState = 'sliding';
+            this._activeRelationsSummary.push(`🏄 ${obj.id} DESLIZANDO sobre ${surface.id}`);
+          } else {
+            obj.customProps.surfaceState = 'on_surface';
+            this._activeRelationsSummary.push(`🪑 ${surface.id} SOSTIENE ${obj.id}`);
+          }
+        } else if (isHeld) {
+          obj.customProps.surfaceState = 'held';
+          obj.customProps.supportedBy = null;
+        } else {
+          obj.customProps.surfaceState = 'airborne';
+          obj.customProps.supportedBy = null;
+        }
+      }
+
+      surface.customProps.supportedObjects = supportedObjects;
+      surface.customProps.activeObjectsCount = supportedObjects.length;
     }
   }
 }

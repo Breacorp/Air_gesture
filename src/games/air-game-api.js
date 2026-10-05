@@ -36,6 +36,8 @@ export class AirGameAPI {
       hands: { left: null, right: null, count: 0 },
       body: null,
       objects: [],
+      surfaces: [],
+      desk: null,
       entities: [],
       relations: []
     };
@@ -98,6 +100,7 @@ export class AirGameAPI {
 
     // 4. Process Physical Objects & Props (Move, Grab, Throw)
     this._processObjects(timestamp);
+    this._processSurfaces(timestamp);
   }
 
   _refreshWorldState(timestamp) {
@@ -112,6 +115,8 @@ export class AirGameAPI {
 
     this.world.body = body && body.missingFrames === 0 ? body : null;
     this.world.objects = objects;
+    this.world.surfaces = this.worldModel.getSurfaces ? this.worldModel.getSurfaces() : [];
+    this.world.desk = this.worldModel.getDeskSurface ? this.worldModel.getDeskSurface() : null;
     this.world.entities = this.worldModel.getAllActiveEntities();
     this.world.relations = this.worldModel.getRelationsSummary ? this.worldModel.getRelationsSummary() : [];
   }
@@ -250,6 +255,46 @@ export class AirGameAPI {
         });
       }
     }
+  }
+
+  _processSurfaces(timestamp) {
+    if (!this.world.desk) return;
+
+    const objectsOnDesk = this.worldModel.getObjectsOnSurface ? this.worldModel.getObjectsOnSurface(this.world.desk.id) : [];
+
+    for (const obj of objectsOnDesk) {
+      if (obj.customProps?.surfaceState === 'sliding') {
+        this.emit('surface.object_slide', {
+          surfaceId: this.world.desk.id,
+          objectId: obj.id,
+          position: obj.position,
+          velocity: obj.velocity,
+          timestamp
+        });
+      } else if (obj.customProps?.surfaceState === 'on_surface') {
+        this.emit('surface.object_on_desk', {
+          surfaceId: this.world.desk.id,
+          objectId: obj.id,
+          position: obj.position,
+          timestamp
+        });
+      }
+    }
+  }
+
+  /**
+   * Convenience Queries for Games (Tabletop, Desk View & Surfaces)
+   */
+  getDesk() {
+    return this.world.desk;
+  }
+
+  getSurfaces() {
+    return this.world.surfaces;
+  }
+
+  getObjectsOnDesk() {
+    return this.worldModel.getObjectsOnSurface ? this.worldModel.getObjectsOnSurface(this.world.desk?.id || 'desk-001') : [];
   }
 
   // --- GEOMETRIC COLLISION UTILITIES FOR GAMES ---

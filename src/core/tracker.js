@@ -18,6 +18,14 @@ export class HandTracker {
     return this.engine.stats;
   }
 
+  get isRunning() {
+    return this.engine.isRunning;
+  }
+
+  set isRunning(val) {
+    this.engine.isRunning = val;
+  }
+
   get mirror() {
     return this.engine.mirror;
   }
@@ -56,6 +64,22 @@ export class HandTracker {
 
   get digitalTwinManager() {
     return this.engine.digitalTwinManager;
+  }
+
+  get surfaceDetector() {
+    return this.engine.surfaceDetector;
+  }
+
+  get cameraManager() {
+    return this.engine.cameraManager;
+  }
+
+  async enumerateVideoDevices() {
+    return this.engine.enumerateVideoDevices();
+  }
+
+  toggleSurfaceDetection() {
+    return this.engine.toggleSurfaceDetection();
   }
 
   async toggleBodyTracking() {

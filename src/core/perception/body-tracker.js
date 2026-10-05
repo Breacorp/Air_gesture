@@ -94,14 +94,15 @@ export class BodyTracker {
    * @param {number} timestamp
    */
   detect(videoElement, timestamp = performance.now()) {
-    if (!this.enabled || !this.isInitialized || !this.poseLandmarker || !videoElement) {
+    if (!this.enabled || !this.isInitialized || !this.poseLandmarker || !videoElement || videoElement.readyState < 2 || videoElement.videoWidth === 0) {
       return null;
     }
 
-    const results = this.poseLandmarker.detectForVideo(videoElement, timestamp);
-    if (!results || !results.landmarks || results.landmarks.length === 0) {
-      return null;
-    }
+    try {
+      const results = this.poseLandmarker.detectForVideo(videoElement, timestamp);
+      if (!results || !results.landmarks || results.landmarks.length === 0) {
+        return null;
+      }
 
     const rawLandmarks = results.landmarks[0];
     if (!rawLandmarks || rawLandmarks.length < 33) return null;
@@ -176,5 +177,10 @@ export class BodyTracker {
       landmarks: processedLandmarks,
       candidates
     };
+  } catch (err) {
+    console.warn('[BodyTracker] detect exception caught:', err);
+    return null;
   }
 }
+}
+

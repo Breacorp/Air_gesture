@@ -127,6 +127,38 @@ export class SpatialWorldModel {
   }
 
   /**
+   * Returns all active surface entities (e.g. desk, table)
+   * @returns {TrackedEntity[]}
+   */
+  getSurfaces() {
+    return this.getEntitiesByType('surface');
+  }
+
+  /**
+   * Returns primary desk surface entity ('desk-001' or subType 'desk')
+   * @returns {TrackedEntity|null}
+   */
+  getDeskSurface() {
+    const direct = this.getEntity('desk-001');
+    if (direct && direct.missingFrames === 0) return direct;
+    const surfaces = this.getSurfaces();
+    return surfaces.find(s => s.subType === 'desk') || null;
+  }
+
+  /**
+   * Returns all object entities resting or sliding on a specified surface
+   * @param {string} surfaceId
+   * @returns {TrackedEntity[]}
+   */
+  getObjectsOnSurface(surfaceId = 'desk-001') {
+    const objects = [
+      ...this.getEntitiesByType('object'),
+      ...this.getEntitiesByType('prop')
+    ];
+    return objects.filter(obj => obj.customProps?.supportedBy === surfaceId);
+  }
+
+  /**
    * Convenience: Get Primary Active Hand (prefers Right, falls back to Left)
    */
   getPrimaryHand() {

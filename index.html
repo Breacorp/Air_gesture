@@ -417,6 +417,77 @@
         </div>
       </div>
 
+      <!-- Brutal Minimalist Perception Debug Stage -->
+      <aside id="perception-debug-panel" class="perception-debug-panel">
+        <div class="perception-debug-card glass-card">
+          <div class="debug-card-header">
+            <span class="debug-badge-pulse"></span>
+            <span class="debug-title">AIR GESTURE — PERCEPTION DEBUG</span>
+            <span id="debug-engine-status" class="debug-status-tag">ONLINE</span>
+          </div>
+
+          <div class="debug-grid">
+            <!-- CAMERA -->
+            <div class="debug-section">
+              <div class="debug-sec-title">CAMERA</div>
+              <div class="debug-value-row">
+                <span id="dbg-cam-res" class="font-mono text-cyan">0 × 0</span>
+                <span id="dbg-cam-fps" class="font-mono text-accent">FPS: 0</span>
+              </div>
+            </div>
+
+            <!-- HANDS -->
+            <div class="debug-section">
+              <div class="debug-sec-title">HANDS</div>
+              <div class="debug-sub-row">
+                <span class="debug-sub-label">Left:</span>
+                <span id="dbg-hand-left" class="font-mono text-muted">NOT DETECTED</span>
+              </div>
+              <div class="debug-sub-row">
+                <span class="debug-sub-label">Right:</span>
+                <span id="dbg-hand-right" class="font-mono text-muted">NOT DETECTED</span>
+              </div>
+            </div>
+
+            <!-- FACE -->
+            <div class="debug-section">
+              <div class="debug-sec-title">FACE</div>
+              <div class="debug-sub-row">
+                <span class="debug-sub-label">Face 001:</span>
+                <span id="dbg-face" class="font-mono text-muted">NOT DETECTED</span>
+              </div>
+            </div>
+
+            <!-- BODY -->
+            <div class="debug-section">
+              <div class="debug-sec-title">BODY</div>
+              <div class="debug-sub-row">
+                <span class="debug-sub-label">Body 001:</span>
+                <span id="dbg-body" class="font-mono text-muted">NOT DETECTED</span>
+              </div>
+            </div>
+
+            <!-- OBJECT -->
+            <div class="debug-section">
+              <div class="debug-sec-title">OBJECT</div>
+              <div class="debug-sub-row">
+                <span class="debug-sub-label">Object 001:</span>
+                <span id="dbg-object" class="font-mono text-muted">NOT DETECTED</span>
+              </div>
+            </div>
+
+            <!-- WORLD MODEL -->
+            <div class="debug-section">
+              <div class="debug-sec-title">SPATIAL WORLD MODEL</div>
+              <div class="debug-value-row">
+                <span>Entities: <strong id="dbg-world-entities" class="font-mono text-accent">0</strong></span>
+                <span id="dbg-world-active" class="font-mono text-xs text-muted">active in scene</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
       <!-- Main Telemetry Stage -->
       <main class="telemetry-stage">
         <!-- Left Hand Telemetry Card -->

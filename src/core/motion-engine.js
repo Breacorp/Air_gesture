@@ -339,8 +339,8 @@ export class MotionEngine {
       screenPoints,
       videoWidth: width,
       videoHeight: height,
-      screenWidth: screenW,
-      screenHeight: screenH
+      screenWidth: typeof window !== 'undefined' ? window.innerWidth : width,
+      screenHeight: typeof window !== 'undefined' ? window.innerHeight : height
     };
 
     buffer.kinematicState = kinematicState;

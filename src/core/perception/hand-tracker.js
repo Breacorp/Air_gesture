@@ -65,10 +65,13 @@ export class HandTracker {
    * @param {number} timestamp
    */
   detect(videoElement, timestamp = performance.now()) {
-    if (!this.handLandmarker || !videoElement) return null;
+    if (!this.handLandmarker || !videoElement || videoElement.readyState < 2 || videoElement.videoWidth === 0) {
+      return null;
+    }
 
-    const results = this.handLandmarker.detectForVideo(videoElement, timestamp);
-    if (!results) return null;
+    try {
+      const results = this.handLandmarker.detectForVideo(videoElement, timestamp);
+      if (!results) return null;
 
     const handsData = [];
     const candidates = [];
@@ -156,5 +159,10 @@ export class HandTracker {
       candidates,
       count: handsData.length
     };
+  } catch (err) {
+    console.warn('[HandTracker] detect exception caught:', err);
+    return null;
   }
 }
+}
+

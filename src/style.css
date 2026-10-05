@@ -115,6 +115,107 @@ body, html {
   box-shadow: 0 0 15px rgba(0, 245, 212, 0.4);
 }
 
+/* Obsolete UI suppression (Perception-First Architecture) */
+#profile-nav-bar,
+#hand-card-left,
+#hand-card-right {
+  display: none !important;
+}
+
+/* Dedicated PERCEPTION DEBUG HUD Stage */
+.perception-debug-panel {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  z-index: 10;
+  pointer-events: auto;
+  max-width: 480px;
+  width: calc(100vw - 48px);
+}
+
+.perception-debug-card {
+  padding: 16px 20px;
+  background: rgba(7, 10, 19, 0.94);
+  border: 1px solid rgba(0, 245, 212, 0.4);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 245, 212, 0.15);
+  border-radius: 14px;
+}
+
+.debug-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.debug-badge-pulse {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #00f5d4;
+  box-shadow: 0 0 10px #00f5d4;
+  animation: pulse 1.5s infinite;
+}
+
+.debug-title {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.8px;
+  color: #00f5d4;
+  flex: 1;
+}
+
+.debug-status-tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(0, 245, 212, 0.15);
+  color: #00f5d4;
+  border: 1px solid rgba(0, 245, 212, 0.3);
+}
+
+.debug-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.debug-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.debug-sec-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+}
+
+.debug-value-row,
+.debug-sub-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
+.debug-sub-label {
+  color: #64748b;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
 /* Glassmorphism Components */
 .glass-card {
   background: var(--bg-surface);

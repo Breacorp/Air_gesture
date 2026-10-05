@@ -101,9 +101,7 @@ export class FaceTracker {
    * @returns {Object|null} Detection results with SpatialWorldModel candidate
    */
   detect(videoElement, timestamp = performance.now()) {
-    if (!this.enabled || !videoElement || videoElement.readyState < 2) return null;
-
-    if (!this.faceLandmarker) {
+    if (!this.enabled || !videoElement || videoElement.readyState < 2 || videoElement.videoWidth === 0 || !this.faceLandmarker) {
       return null;
     }
 

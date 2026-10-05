@@ -52,12 +52,12 @@ export class FullSensorView {
     this.video = videoElement;
     this.container = containerElement || document.body;
 
-    this.isActive = false;
+    this.isActive = true; // Active by default for immediate perception feedback
 
     // High-performance overlay canvas
     this.canvas = document.createElement('canvas');
     this.canvas.id = 'full-sensor-view-canvas';
-    this.canvas.className = 'full-sensor-canvas hidden';
+    this.canvas.className = 'full-sensor-canvas';
     this.ctx = this.canvas.getContext('2d', { alpha: true });
 
     this.container.appendChild(this.canvas);
@@ -66,6 +66,10 @@ export class FullSensorView {
     this.videoRect = { x: 0, y: 0, width: 0, height: 0 };
 
     window.addEventListener('resize', () => this.resize());
+  }
+
+  get isEnabled() {
+    return this.isActive;
   }
 
   setActive(active) {
@@ -152,10 +156,12 @@ export class FullSensorView {
     }
 
     // 3. Draw Hands Skeletons (21 landmarks each)
-    const hands = data.hands || [];
-    for (const hand of hands) {
-      if (hand.landmarks) {
-        this._renderHand(ctx, hand.landmarks, hand.handedness, hand.pose, isMirrored);
+    const handsList = Array.isArray(data.hands)
+      ? data.hands
+      : (data.hands ? Object.values(data.hands).filter(Boolean) : []);
+    for (const hand of handsList) {
+      if (hand && hand.landmarks) {
+        this._renderHand(ctx, hand.landmarks, hand.handedness || 'Right', hand.pose || {}, isMirrored);
       }
     }
 
@@ -175,6 +181,9 @@ export class FullSensorView {
 
     // 6. Draw Live Sensor Diagnostic Telemetry Banner
     this._renderSensorHUD(ctx, vr, data);
+
+    // 7. Draw AIR GESTURE - PERCEPTION DEBUG telemetry panel
+    this._renderPerceptionDebugBox(ctx, vr, data);
   }
 
   _renderSensorFrame(ctx, vr) {
@@ -404,6 +413,163 @@ export class FullSensorView {
     const handsCount = data.hands?.length || 0;
     ctx.fillStyle = '#ffffff';
     ctx.fillText(`BODY: ${bodyActive} | HANDS: ${handsCount}`, barX + 440, barY + 20);
+
+    ctx.restore();
+  }
+
+  /**
+   * Renders the brutal, minimalist AIR GESTURE - PERCEPTION DEBUG HUD box
+   */
+  _renderPerceptionDebugBox(ctx, vr, data) {
+    ctx.save();
+
+    const boxW = 320;
+    const boxH = 430;
+    const boxX = vr.x + 20;
+    const boxY = vr.y + 56;
+
+    // Semi-transparent dark glass background
+    ctx.fillStyle = 'rgba(7, 10, 19, 0.92)';
+    ctx.strokeStyle = 'rgba(0, 245, 212, 0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(boxX, boxY, boxW, boxH, 10);
+    ctx.fill();
+    ctx.stroke();
+
+    // Header: AIR GESTURE — PERCEPTION DEBUG
+    ctx.fillStyle = '#00f5d4';
+    ctx.font = 'bold 12px "JetBrains Mono", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('AIR GESTURE — PERCEPTION DEBUG', boxX + 16, boxY + 24);
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(boxX + 16, boxY + 34);
+    ctx.lineTo(boxX + boxW - 16, boxY + 34);
+    ctx.stroke();
+
+    let curY = boxY + 54;
+    const lineSpacing = 16;
+
+    // CAMERA SECTION
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = 'bold 10px "JetBrains Mono", monospace';
+    ctx.fillText('CAMERA', boxX + 16, curY);
+    curY += lineSpacing;
+
+    const vidW = this.video.videoWidth || 1280;
+    const vidH = this.video.videoHeight || 720;
+    const fps = data.stats?.fps || 0;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '11px "JetBrains Mono", monospace';
+    ctx.fillText(`${vidW} × ${vidH}       FPS: ${fps}`, boxX + 16, curY);
+    curY += lineSpacing * 1.5;
+
+    // HAND SECTION
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = 'bold 10px "JetBrains Mono", monospace';
+    ctx.fillText('HAND', boxX + 16, curY);
+    curY += lineSpacing;
+
+    const handsList = Array.isArray(data.hands)
+      ? data.hands
+      : (data.hands ? Object.values(data.hands).filter(Boolean) : []);
+    let leftHand = null;
+    let rightHand = null;
+    for (const h of handsList) {
+      if (!h) continue;
+      if ((h.handedness || '').toLowerCase() === 'left') leftHand = h;
+      else rightHand = h;
+    }
+
+    // Left Hand
+    if (leftHand) {
+      ctx.fillStyle = '#00f5d4';
+      const conf = Math.round((leftHand.confidence || 0.9) * 100);
+      const pos = leftHand.landmarks ? `(${leftHand.landmarks[0].x.toFixed(2)}, ${leftHand.landmarks[0].y.toFixed(2)})` : '';
+      ctx.fillText(`Left:  DETECTED  conf: ${conf}% ${pos}`, boxX + 16, curY);
+    } else {
+      ctx.fillStyle = '#64748b';
+      ctx.fillText('Left:  NOT DETECTED', boxX + 16, curY);
+    }
+    curY += lineSpacing;
+
+    // Right Hand
+    if (rightHand) {
+      ctx.fillStyle = '#00f5d4';
+      const conf = Math.round((rightHand.confidence || 0.9) * 100);
+      const pos = rightHand.landmarks ? `(${rightHand.landmarks[0].x.toFixed(2)}, ${rightHand.landmarks[0].y.toFixed(2)})` : '';
+      ctx.fillText(`Right: DETECTED  conf: ${conf}% ${pos}`, boxX + 16, curY);
+    } else {
+      ctx.fillStyle = '#64748b';
+      ctx.fillText('Right: NOT DETECTED', boxX + 16, curY);
+    }
+    curY += lineSpacing * 1.5;
+
+    // FACE SECTION
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = 'bold 10px "JetBrains Mono", monospace';
+    ctx.fillText('FACE', boxX + 16, curY);
+    curY += lineSpacing;
+
+    const face = data.worldModel?.getEntity('face-primary') || data.face;
+    if (face && face.missingFrames === 0) {
+      ctx.fillStyle = '#a100ff';
+      const yaw = Math.round(face.rotation?.yaw || 0);
+      const pitch = Math.round(face.rotation?.pitch || 0);
+      ctx.fillText(`Face 001: DETECTED (pitch: ${pitch}°, yaw: ${yaw}°)`, boxX + 16, curY);
+    } else {
+      ctx.fillStyle = '#64748b';
+      ctx.fillText('Face 001: NOT DETECTED', boxX + 16, curY);
+    }
+    curY += lineSpacing * 1.5;
+
+    // BODY SECTION
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = 'bold 10px "JetBrains Mono", monospace';
+    ctx.fillText('BODY', boxX + 16, curY);
+    curY += lineSpacing;
+
+    const body = data.worldModel?.getEntity('body-primary') || data.body;
+    if (body && body.missingFrames === 0) {
+      ctx.fillStyle = '#ffd166';
+      const pts = body.landmarks ? body.landmarks.length : 33;
+      ctx.fillText(`Body 001: DETECTED (${pts} landmarks)`, boxX + 16, curY);
+    } else {
+      ctx.fillStyle = '#64748b';
+      ctx.fillText('Body 001: NOT DETECTED', boxX + 16, curY);
+    }
+    curY += lineSpacing * 1.5;
+
+    // OBJECT SECTION
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = 'bold 10px "JetBrains Mono", monospace';
+    ctx.fillText('OBJECT', boxX + 16, curY);
+    curY += lineSpacing;
+
+    const objects = data.worldModel?.getEntitiesByType('object') || [];
+    const activeObj = objects.find(o => o.missingFrames === 0);
+    if (activeObj) {
+      ctx.fillStyle = '#ff6b35';
+      const conf = Math.round((activeObj.confidence || 0.8) * 100);
+      ctx.fillText(`Object 001: DETECTED (conf: ${conf}%, ${activeObj.subType || 'prop'})`, boxX + 16, curY);
+    } else {
+      ctx.fillStyle = '#64748b';
+      ctx.fillText('Object 001: NOT DETECTED', boxX + 16, curY);
+    }
+    curY += lineSpacing * 1.5;
+
+    // WORLD MODEL SECTION
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = 'bold 10px "JetBrains Mono", monospace';
+    ctx.fillText('WORLD MODEL', boxX + 16, curY);
+    curY += lineSpacing;
+
+    const totalEntities = data.worldModel?.getAllActiveEntities ? data.worldModel.getAllActiveEntities().length : 0;
+    ctx.fillStyle = totalEntities > 0 ? '#00f5d4' : '#ffffff';
+    ctx.fillText(`Entities: ${totalEntities} active in 3D scene`, boxX + 16, curY);
 
     ctx.restore();
   }
