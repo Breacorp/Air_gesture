@@ -231,11 +231,14 @@ export class PerceptionEngine {
           }
         }
 
-        // E. Auxiliary Fast Color Object Tracking
+        // E. Multi-Signal Object Perception & Temporal Tracking Engine
         if (this.objectTracker.enabled) {
-          const objResult = this.objectTracker.detect(this.videoElement, now);
+          const objResult = this.objectTracker.detect(this.videoElement, now, rawHandLandmarks);
           if (objResult && objResult.candidates) {
             allCandidates.push(...objResult.candidates);
+            this.stats.trackedObjectsCount = objResult.count;
+          } else {
+            this.stats.trackedObjectsCount = 0;
           }
         }
 

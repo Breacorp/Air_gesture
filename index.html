@@ -612,18 +612,22 @@
             </div>
 
             <!-- Perception Trackers Control Toolbar -->
+            <!-- Perception Trackers Control Toolbar -->
             <div class="perception-toolbar" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 2px;">
               <button id="btn-toggle-body-tracker" class="btn btn-secondary btn-xs" title="Activar/Desactivar Pose Corporal (Fase 2)">
                 <span>👤 Cuerpo: <strong id="lbl-body-tracker-state" class="text-muted">OFF</strong></span>
               </button>
-              <button id="btn-toggle-object-tracker" class="btn btn-secondary btn-xs" title="Activar/Desactivar Tracking de Objetos Físicos (Fase 3)">
-                <span>🟠 Objeto: <strong id="lbl-object-tracker-state" class="text-muted">OFF</strong></span>
+              <button id="btn-toggle-object-tracker" class="btn btn-secondary btn-xs" title="Activar/Desactivar Percepción de Objetos (Apariencia + Geometría + Movimiento)">
+                <span>🎯 Objetos: <strong id="lbl-object-tracker-state" class="text-muted">OFF</strong></span>
               </button>
-              <select id="select-object-color" class="btn-xs" style="background:#0a0f1d; color:#fff; border:1px solid #ffffff1a; border-radius:6px; padding:0 6px; font-size:11px; height:28px;">
-                <option value="orange">🟠 Naranja</option>
-                <option value="green">🟢 Verde</option>
+              <select id="select-object-color" class="btn-xs" style="background:#0a0f1d; color:#fff; border:1px solid #ffffff1a; border-radius:6px; padding:0 6px; font-size:11px; height:28px;" title="Señal auxiliar de color">
+                <option value="auto">🌈 Auto (Multiseñal / Cualquier color)</option>
+                <option value="orange">🟠 Naranja (Ej. Destornillador)</option>
+                <option value="black">⚫ Oscuro / Negro</option>
+                <option value="metallic">⚙️ Metálico / Brillante</option>
                 <option value="blue">🔵 Azul</option>
-                <option value="magenta">🟣 Magenta</option>
+                <option value="green">🟢 Verde</option>
+                <option value="red">🔴 Rojo</option>
               </select>
             </div>
 
@@ -681,17 +685,40 @@
                 </div>
               </div>
 
-              <!-- Object Prop Entity -->
-              <div class="world-entity-card" id="entity-card-object" style="background:rgba(255,107,53,0.06); border:1px solid rgba(255,107,53,0.2); border-radius:8px; padding:8px 10px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                  <span style="font-size:11px; font-weight:700; color:#ff6b35;">OBJECT Prop (Color Controller)</span>
-                  <span id="entity-status-object" class="badge-mini" style="color:var(--text-muted);">DISABLED</span>
+              <!-- Dedicated OBJECT PERCEPTION Card -->
+              <div class="world-entity-card object-perception-card" id="entity-card-object" style="background:rgba(255,107,53,0.08); border:1px solid rgba(255,107,53,0.3); border-radius:10px; padding:10px 12px; margin-top:2px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid rgba(255,107,53,0.2); padding-bottom:6px;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:12px; font-weight:800; color:#ff6b35; letter-spacing:0.8px;">OBJECT PERCEPTION</span>
+                    <span id="obj-perception-count" class="badge-mini" style="background:rgba(255,107,53,0.15); color:#ff9e79; border:1px solid rgba(255,107,53,0.4);">Objects: 0</span>
+                  </div>
+                  <span id="entity-status-object" class="badge-mini" style="color:var(--text-muted); font-weight:700;">DISABLED</span>
                 </div>
-                <div class="diag-grid" style="grid-template-columns: repeat(4, 1fr); padding:4px 6px;">
-                  <div class="diag-col"><span class="diag-label">POS (X,Y,Z)</span><span id="entity-pos-object" class="diag-val font-mono">--</span></div>
-                  <div class="diag-col"><span class="diag-label">VELOCIDAD</span><span id="entity-vel-object" class="diag-val font-mono">--</span></div>
-                  <div class="diag-col"><span class="diag-label">TAMAÑO/RADIO</span><span id="entity-scale-object" class="diag-val font-mono">--</span></div>
-                  <div class="diag-col"><span class="diag-label">PÍXELES/CONF</span><span id="entity-meta-object" class="diag-val font-mono">--</span></div>
+
+                <div id="obj-perception-body" style="display:flex; flex-direction:column; gap:6px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span id="obj-perception-id" style="font-family:'Space Grotesk', sans-serif; font-size:13px; font-weight:700; color:#ffffff;">OBJECT #001</span>
+                    <span id="obj-perception-track-badge" class="badge-mini" style="background:rgba(0,245,212,0.15); color:#00f5d4; border:1px solid rgba(0,245,212,0.4);">Tracking: ACTIVE</span>
+                  </div>
+
+                  <!-- Matrix Rows -->
+                  <div class="diag-grid" style="grid-template-columns: repeat(3, 1fr); padding:4px 6px; background:rgba(0,0,0,0.3); border-radius:6px;">
+                    <div class="diag-col"><span class="diag-label">CONFIDENCE</span><span id="obj-confidence" class="diag-val font-mono">--</span></div>
+                    <div class="diag-col"><span class="diag-label">OCCLUSION</span><span id="obj-occlusion" class="diag-val font-mono">--</span></div>
+                    <div class="diag-col"><span class="diag-label">DEPTH</span><span id="obj-depth-status" class="diag-val font-mono">estimated</span></div>
+                  </div>
+
+                  <div class="diag-grid" style="grid-template-columns: repeat(3, 1fr); padding:4px 6px; background:rgba(0,0,0,0.3); border-radius:6px;">
+                    <div class="diag-col"><span class="diag-label">POSITION (X,Y,Z)</span><span id="entity-pos-object" class="diag-val font-mono">--</span></div>
+                    <div class="diag-col"><span class="diag-label">VELOCITY</span><span id="entity-vel-object" class="diag-val font-mono">--</span></div>
+                    <div class="diag-col"><span class="diag-label">ROTATION</span><span id="obj-rotation" class="diag-val font-mono">--</span></div>
+                  </div>
+
+                  <div class="diag-grid" style="grid-template-columns: repeat(3, 1fr); padding:4px 6px; background:rgba(0,0,0,0.3); border-radius:6px;">
+                    <div class="diag-col"><span class="diag-label">SHAPE</span><span id="obj-shape" class="diag-val font-mono">--</span></div>
+                    <div class="diag-col"><span class="diag-label">SILHOUETTE</span><span id="obj-silhouette" class="diag-val font-mono">--</span></div>
+                    <div class="diag-col"><span class="diag-label">RECONSTRUCTION</span><span id="obj-reconstruction" class="diag-val font-mono">pending</span></div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -311,25 +311,67 @@ export class TelemetryHUD {
       setTxt('entity-meta-body', '33 pts');
     }
 
-    // 4. Object Prop
+    // 4. Object Perception & Temporal Tracking Engine
     const objects = worldModel.getEntitiesByType('object');
     const objActive = objects.length > 0 && objects[0].missingFrames === 0;
     const statusObj = document.getElementById('entity-status-object');
-    if (statusObj) {
-      statusObj.textContent = objActive ? `ACTIVO (${objects[0].subType})` : 'DISABLED';
-      statusObj.style.color = objActive ? '#ff6b35' : 'var(--text-muted)';
+    const countBadge = document.getElementById('obj-perception-count');
+
+    if (countBadge) {
+      countBadge.textContent = `Objects: ${objects.length}`;
+      countBadge.style.color = objects.length > 0 ? '#00f5d4' : '#ff9e79';
     }
-    if (objActive) {
+
+    if (statusObj) {
+      if (objActive) {
+        const trackStatus = objects[0].customProps?.status || 'ACTIVE';
+        statusObj.textContent = trackStatus;
+        statusObj.style.color = trackStatus === 'OCCLUDED' ? 'var(--accent-yellow)' : 'var(--accent-cyan)';
+      } else {
+        statusObj.textContent = objects.length > 0 ? 'COASTING' : 'SEARCHING';
+        statusObj.style.color = 'var(--text-muted)';
+      }
+    }
+
+    if (objects.length > 0) {
       const obj = objects[0];
+      const trackStatus = obj.customProps?.status || (obj.missingFrames === 0 ? 'ACTIVE' : 'COASTING');
+      const formattedId = obj.id.toUpperCase().replace('OBJECT-', 'OBJECT #').replace('TRACK-OBJ-', 'OBJECT #');
+
+      setTxt('obj-perception-id', formattedId);
+      const trackBadge = document.getElementById('obj-perception-track-badge');
+      if (trackBadge) {
+        trackBadge.textContent = `Tracking: ${trackStatus}`;
+        trackBadge.style.color = trackStatus === 'OCCLUDED' ? '#ffd166' : (trackStatus === 'ACTIVE' ? '#00f5d4' : '#94a3b8');
+        trackBadge.style.borderColor = trackStatus === 'OCCLUDED' ? '#ffd16666' : '#00f5d466';
+      }
+
+      setTxt('obj-confidence', `${Math.round((obj.confidence || 0.85) * 100)}%`);
+      const occPct = obj.customProps?.occlusionPct || 0;
+      const visPct = obj.customProps?.visiblePct !== undefined ? obj.customProps.visiblePct : (100 - occPct);
+      setTxt('obj-occlusion', `${occPct}% (Vis ${visPct}%)`);
+      setTxt('obj-depth-status', `estimated`);
+
       setTxt('entity-pos-object', `${obj.position.x.toFixed(2)}, ${obj.position.y.toFixed(2)}, ${obj.position.z.toFixed(2)}`);
       setTxt('entity-vel-object', `${obj.velocity.speed.toFixed(2)} u/s`);
-      setTxt('entity-scale-object', `r: ${(obj.scale.x * 100).toFixed(1)}%`);
-      setTxt('entity-meta-object', `${obj.customProps?.pixelCount || 0} px`);
+      setTxt('obj-rotation', `${Math.round(obj.rotation?.pitch || 0)}°, ${Math.round(obj.rotation?.roll || 0)}°`);
+
+      const shapeLabel = obj.customProps?.shapeLabel || (obj.subType !== 'unknown' ? obj.subType : 'detected');
+      setTxt('obj-shape', shapeLabel);
+      setTxt('obj-silhouette', 'detected');
+      setTxt('obj-reconstruction', obj.customProps?.reconstructionStatus || 'pending');
     } else {
+      setTxt('obj-perception-id', 'OBJECT --');
+      setTxt('obj-perception-track-badge', 'Tracking: IDLE');
+      setTxt('obj-confidence', '--');
+      setTxt('obj-occlusion', '--');
+      setTxt('obj-depth-status', 'estimated');
       setTxt('entity-pos-object', '--');
       setTxt('entity-vel-object', '--');
-      setTxt('entity-scale-object', '--');
-      setTxt('entity-meta-object', '--');
+      setTxt('obj-rotation', '--');
+      setTxt('obj-shape', '--');
+      setTxt('obj-silhouette', '--');
+      setTxt('obj-reconstruction', 'pending');
     }
 
     // 5. Multimodal Spatial Relationships Chip

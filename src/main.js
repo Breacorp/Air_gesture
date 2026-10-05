@@ -108,6 +108,9 @@ window.__interactionEngine = interactionEngine;
 window.__macosAdapter = macosAdapter;
 window.__profileManager = profileManager;
 window.__globalEventBus = globalEventBus;
+window.__hud = hud;
+window.__visualizer = visualizer;
+window.__perceptionTracker = tracker;
 
 // When macOS daemon reports actual screen bounds, update interaction engine
 macosAdapter.onScreenResolution = (screen) => {

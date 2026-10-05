@@ -433,34 +433,141 @@ export class HandVisualizer3D {
 
     const colorVal = parseInt(colorHexStr.replace('#', '0x'), 16) || 0xff6b35;
 
-    // Glowing sphere
-    const sphereGeo = new THREE.SphereGeometry(0.1, 24, 24);
+    // 1. Central Core: Glowing sphere
+    const sphereGeo = new THREE.SphereGeometry(0.06, 20, 20);
     const sphereMat = new THREE.MeshStandardMaterial({
       color: colorVal,
       emissive: colorVal,
-      emissiveIntensity: 0.8,
+      emissiveIntensity: 0.9,
       roughness: 0.2,
       metalness: 0.7,
       transparent: true,
-      opacity: 0.88
+      opacity: 0.85
     });
     const sphere = new THREE.Mesh(sphereGeo, sphereMat);
     group.add(sphere);
 
-    // Orbital target ring
-    const ringGeo = new THREE.RingGeometry(0.14, 0.16, 32);
+    // 2. Orbital target ring
+    const ringGeo = new THREE.RingGeometry(0.09, 0.11, 32);
     const ringMat = new THREE.MeshBasicMaterial({
       color: colorVal,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.95
+      opacity: 0.9
     });
     const ring = new THREE.Mesh(ringGeo, ringMat);
     group.add(ring);
 
-    const rig = { group, sphere, ring, sphereMat, ringMat };
+    // 3. 3D Bounding Box Wireframe
+    const boxGeo = new THREE.BoxGeometry(1, 1, 0.15);
+    const boxEdges = new THREE.EdgesGeometry(boxGeo);
+    const boxMat = new THREE.LineBasicMaterial({
+      color: colorVal,
+      transparent: true,
+      opacity: 0.9
+    });
+    const boxMesh = new THREE.LineSegments(boxEdges, boxMat);
+    group.add(boxMesh);
+
+    // 4. Billboard Sprite Label for "OBJECT #001"
+    const labelCanvas = document.createElement('canvas');
+    labelCanvas.width = 320;
+    labelCanvas.height = 100;
+    const labelTexture = new THREE.CanvasTexture(labelCanvas);
+    const spriteMat = new THREE.SpriteMaterial({ map: labelTexture, transparent: true });
+    const labelSprite = new THREE.Sprite(spriteMat);
+    labelSprite.scale.set(0.7, 0.22, 1.0);
+    group.add(labelSprite);
+
+    // 5. 3D Contour Silhouette Line
+    const contourGeo = new THREE.BufferGeometry();
+    const contourMat = new THREE.LineBasicMaterial({
+      color: 0x00f5d4,
+      transparent: true,
+      opacity: 0.85
+    });
+    const contourMesh = new THREE.LineLoop(contourGeo, contourMat);
+    contourMesh.visible = false;
+    group.add(contourMesh);
+
+    // 6. Trajectory Breadcrumbs Trail (• • • dots)
+    const breadcrumbGroup = new THREE.Group();
+    this.scene.add(breadcrumbGroup); // In world scene so it doesn't move with the object
+    const breadcrumbDots = [];
+    const dotGeo = new THREE.SphereGeometry(0.018, 12, 12);
+    for (let i = 0; i < 16; i++) {
+      const dotMat = new THREE.MeshBasicMaterial({
+        color: colorVal,
+        transparent: true,
+        opacity: Math.max(0.15, 0.9 - i * 0.05)
+      });
+      const dot = new THREE.Mesh(dotGeo, dotMat);
+      dot.visible = false;
+      breadcrumbGroup.add(dot);
+      breadcrumbDots.push(dot);
+    }
+
+    const rig = {
+      group,
+      sphere,
+      ring,
+      boxMesh,
+      labelCanvas,
+      labelTexture,
+      labelSprite,
+      contourMesh,
+      contourGeo,
+      breadcrumbGroup,
+      breadcrumbDots,
+      lastLabelText: ''
+    };
+
     this.objectRigs.set(id, rig);
     return rig;
+  }
+
+  _drawObjectLabel(rig, id, status, confPct, occlusionPct, shapeLabel) {
+    const textKey = `${id}-${status}-${confPct}-${occlusionPct}-${shapeLabel}`;
+    if (rig.lastLabelText === textKey) return;
+    rig.lastLabelText = textKey;
+
+    const ctx = rig.labelCanvas.getContext('2d');
+    const w = rig.labelCanvas.width;
+    const h = rig.labelCanvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    // High-tech translucent rounded background
+    ctx.fillStyle = 'rgba(10, 15, 29, 0.85)';
+    ctx.strokeStyle = status === 'OCCLUDED' ? 'rgba(255, 209, 102, 0.85)' : 'rgba(255, 107, 53, 0.9)';
+    ctx.lineWidth = 3;
+
+    ctx.beginPath();
+    ctx.roundRect(4, 4, w - 8, h - 8, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    // Top Header: OBJECT ID (e.g. OBJECT #001)
+    const formattedId = id.toUpperCase().replace('OBJECT-', 'OBJECT #').replace('TRACK-OBJ-', 'OBJECT #');
+    ctx.font = 'bold 26px "Space Grotesk", -apple-system, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(formattedId, 16, 36);
+
+    // Status Badge
+    ctx.font = 'bold 16px "JetBrains Mono", monospace';
+    if (status === 'OCCLUDED') {
+      ctx.fillStyle = '#ffd166';
+      ctx.fillText(`OCCLUDED (${occlusionPct}%)`, w - 170, 34);
+    } else {
+      ctx.fillStyle = '#00f5d4';
+      ctx.fillText(`ACTIVE ${confPct}%`, w - 140, 34);
+    }
+
+    // Subtitle: Shape & Kinematics
+    ctx.font = '16px "JetBrains Mono", monospace';
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText(`Shape: ${shapeLabel || 'detected'} • Traj: •••`, 16, 72);
+
+    rig.labelTexture.needsUpdate = true;
   }
 
   updateObject(objectEntity) {
@@ -472,19 +579,67 @@ export class HandVisualizer3D {
 
     rig.group.visible = true;
 
-    // Unproject normalized X, Y to 3D frustum
+    // 1. Unproject normalized center position to 3D world space
     const pos = objectEntity.position;
     const wp = this.unprojectUV(pos.x, pos.y, pos.z || 0);
     rig.group.position.copy(wp);
 
-    // Orbital ring rotation
+    // 2. Orbital target ring rotation
     rig.ring.rotation.z += 0.03;
     rig.ring.lookAt(this.camera.position);
 
-    // Scale by apparent radius
-    const r = Math.max(0.06, Math.min(0.3, objectEntity.scale?.x || 0.1));
-    rig.sphere.scale.set(r / 0.1, r / 0.1, r / 0.1);
-    rig.ring.scale.set(r / 0.1, r / 0.1, r / 0.1);
+    // 3. Compute 3D Bounding Box size
+    const bbox = objectEntity.boundingBox || { width: 0.15, height: 0.15 };
+    const pMin = this.unprojectUV(pos.x - (bbox.width || 0.15) / 2, pos.y - (bbox.height || 0.15) / 2, pos.z || 0);
+    const pMax = this.unprojectUV(pos.x + (bbox.width || 0.15) / 2, pos.y + (bbox.height || 0.15) / 2, pos.z || 0);
+    const boxW = Math.max(0.12, Math.abs(pMax.x - pMin.x));
+    const boxH = Math.max(0.12, Math.abs(pMax.y - pMin.y));
+    const boxD = Math.max(0.08, (boxW + boxH) * 0.25);
+
+    rig.boxMesh.scale.set(boxW, boxH, boxD);
+
+    // 4. Update Billboard Label position & text
+    rig.labelSprite.position.set(0, boxH / 2 + 0.18, 0);
+    const status = objectEntity.customProps?.status || 'ACTIVE';
+    const confPct = Math.round((objectEntity.confidence || 0.85) * 100);
+    const occPct = objectEntity.customProps?.occlusionPct || 0;
+    const shapeLabel = objectEntity.customProps?.shapeLabel || 'detected';
+    this._drawObjectLabel(rig, id, status, confPct, occPct, shapeLabel);
+
+    // 5. Update 3D Contour Outline if present
+    const contour = objectEntity.contour || objectEntity.customProps?.contour;
+    if (contour && contour.length > 2) {
+      const pts3D = [];
+      for (const pt of contour) {
+        const cw = this.unprojectUV(pt.x, pt.y, pos.z || 0);
+        // Relative to group position
+        pts3D.push(cw.x - wp.x, cw.y - wp.y, cw.z - wp.z);
+      }
+      rig.contourGeo.setAttribute('position', new THREE.Float32BufferAttribute(pts3D, 3));
+      rig.contourMesh.visible = true;
+    } else {
+      rig.contourMesh.visible = false;
+    }
+
+    // 6. Update 3D Trajectory Breadcrumbs Trail (• • •)
+    const trajectory = objectEntity.customProps?.trajectory || [];
+    if (trajectory.length > 0) {
+      rig.breadcrumbGroup.visible = true;
+      for (let i = 0; i < rig.breadcrumbDots.length; i++) {
+        const dot = rig.breadcrumbDots[i];
+        const trajIdx = trajectory.length - 1 - i;
+        if (trajIdx >= 0) {
+          const tPoint = trajectory[trajIdx];
+          const dotWp = this.unprojectUV(tPoint.x, tPoint.y, tPoint.z || 0);
+          dot.position.copy(dotWp);
+          dot.visible = true;
+        } else {
+          dot.visible = false;
+        }
+      }
+    } else {
+      rig.breadcrumbGroup.visible = false;
+    }
   }
 
   hideObject(id) {

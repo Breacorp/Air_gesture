@@ -126,6 +126,14 @@ export class TrackedEntity {
       this.scale = { ...this.scale, ...observation.scale };
     }
 
+    // Update Bounding Box & Contour if provided directly (e.g. object perception)
+    if (observation.boundingBox) {
+      this.boundingBox = { ...observation.boundingBox };
+    }
+    if (observation.contour) {
+      this.contour = observation.contour;
+    }
+
     // Merge custom properties
     if (observation.customProps) {
       Object.assign(this.customProps, observation.customProps);
