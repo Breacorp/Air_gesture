@@ -1,78 +1,76 @@
 # HANDOFF - Air_gesture
 
 ## Session Context
-- **Date:** 2026-10-05 15:08
+- **Date:** 2026-10-05 15:25
 - **Project:** Air_gesture
-- **Milestone:** Percepción Multimodal: FaceTracker & Pipeline Digital Twin
-- **Status:** ✓ Completado, Verificado y Documentado
+- **Milestone:** Rediseño Arquitectónico: Multi-Signal Object Perception & Temporal Tracking Engine
+- **Status:** ✓ Completado, Verificado con 32 Tests Unitarios/Integración y Desplegado en GitHub
 
 ## Summary
-Evolución de la capa de percepción monomodal a un **Perception Engine Multimodal** desacoplado, incorporando:
-1. **FaceTracker:** Tracking facial de 478 landmarks 3D con estimación de orientación de la cabeza (Pitch, Yaw, Roll), vector de mirada (*gaze*), apertura de boca y parpadeo.
-2. **Object Perception Pipeline (Niveles 1 al 7):**
-   - **Nivel 1 (Detection):** Detección de objetos físicos independientes del color (`ObjectDetector`), aislando objetos sostenidos en la mano y zonas de alto contraste.
-   - **Nivel 2 (Segmentation):** Segmentación de silueta, máscara binaria y contornos (`ObjectSegmenter`).
-   - **Nivel 3, 4 y 5 (Tracking & Pose):** Seguimiento espacio-temporal con estimación de velocidad y profundidad relativa monocular (`ObjectTrackingEngine`).
-   - **Nivel 6 y 7 (Reconstruction & Digital Twin):** Acumulación temporal de vistas multi-ángulo mientras el objeto gira frente a la cámara, generando la geometría 3D y la textura UV (`MultiViewReconstructor`).
-3. **Vínculo Físico-Virtual en SpatialWorldModel:**
-   - La entidad física real (`obj-real-001`) declara `capabilities.physical = true` y enlaza `customProps.digitalTwinId = "twin-virtual-001"`.
-   - La entidad gemela virtual (`twin-virtual-001`) declara `capabilities.virtual = true`, `capabilities.grabbable = true`, `capabilities.scalable = true`, `capabilities.rotatable = true` y referencia a su fuente física `customProps.physicalSourceId = "obj-real-001"`.
+Reemplazo total del enfoque primitivo de "detector de colores HSV" por una arquitectura robusta de **Percepción de Objetos Multiseñal (Appearance + Geometry + Motion)**:
+1. **El color como señal auxiliar, no definición:**
+   - Detecta cualquier objeto físico (naranja flúor, negro, metálico, rojo, azul, transparente o neutro).
+   - Combina luminancia extrema (objetos oscuros/metálicos), contraste cromático, gradientes de bordes y sustracción de piel.
+2. **Separación de Tracking vs. Reconocimiento:**
+   - Tracking ("¿Dónde está el objeto?") opera de forma autónoma antes de que el objeto sea clasificado ("¿Qué objeto es?").
+   - Identidad persistente estandarizada: `object-001`, `object-002`, etc.
+3. **Resistencia a Oclusiones Manuales y Dead-Reckoning:**
+   - Cuando la mano sostiene el objeto (ej. destornillador), calcula oclusión exacta (ej. `visible: 63%, occluded: 37%, track: ACTIVE`).
+   - Si la mano cubre temporalmente el objeto o realiza un barrido rápido, el tracker activa predicción inercial (*dead-reckoning* $p_t = p_{t-1} + v \cdot dt$) y pasa a estado `COASTING` sin perder el ID `object-001`.
+4. **Visualización 3D y Rastro de Trayectoria:**
+   - Bounding box 3D de alta tecnología con etiqueta flotante billboard (`OBJECT #001 [ACTIVE 94%]`).
+   - Contorno de silueta 3D y rastro de migas de pan (*breadcrumb trail* `• • •`) trazado en el espacio 3D.
+5. **Panel UI de Percepción Dedicado:**
+   - Tarjeta **OBJECT PERCEPTION** en el HUD mostrando: `OBJECT #001`, `Tracking: ACTIVE`, `Confidence: 94%`, `Occlusion: 31% (Vis 69%)`, `Position`, `Velocity`, `Rotation`, `Shape: elongated (screwdriver)`, `Silhouette: detected`, `Depth: estimated`, `Reconstruction: pending`.
 
-## Architecture: Multimodal Perception & Digital Twin
+## Architecture: Multi-Signal Object Perception
 
 ```text
-                    CAMERA
-                       │
-                       ▼
-              PERCEPTION ENGINE
-                       │
-      ┌────────────────┼─────────────────┐
-      │                │                 │
-      ▼                ▼                 ▼
-     HAND             BODY              FACE (FaceTracker: Head Pose, Gaze, Expressions)
-      │                │                 │
-      └────────────────┼─────────────────┘
-                       │
-                       ▼
-              OBJECT PERCEPTION
-                       │
-              ┌────────┼────────┐
-              ▼        ▼        ▼
-          DETECT     TRACK    SEGMENT
-              │        │        │
-              └────────┼────────┘
-                       ▼
-              DEPTH / RECONSTRUCTION (Multi-View Angle Accumulation)
-                       │
-                       ▼
-                DIGITAL TWIN (3D Mesh + UV Canvas Texture + Point Cloud)
-                       │
-                       ▼
-             SPATIAL WORLD MODEL
-              [obj-real-01] <──(digitalTwinId)──> [twin-virtual-01]
-                       │
-                       ▼
-             UNIVERSAL INTERACTION ENGINE (Intent + Target Capabilities -> Action)
+                 OBJECT PERCEPTION
+                        │
+        ┌───────────────┼────────────────┐
+        ↓               ↓                ↓
+     Appearance       Geometry        Motion
+        │               │                │
+    color/texture    shape/edges      tracking
+        │               │                │
+        └───────────────┼────────────────┘
+                        ↓
+                 OBJECT TRACK (object-001)
+             (Dead-Reckoning on Occlusion)
+                        ↓
+                  WORLD MODEL
+                        │
+         ┌──────────────┴──────────────┐
+         ▼                             ▼
+   HUD PERCEPTION                3D VISUALIZER
+ (Telemetry Card)         (Box + Label + Contour + •••)
 ```
 
 ## Files Touched
-- `src/core/perception/face-tracker.js`: Tracker facial con MediaPipe FaceLandmarker (478 landmarks, head pose pitch/yaw/roll, gaze vector, mouth open, blink).
-- `src/core/perception/objects/object-detector.js`: Detector de objetos físicos por contraste y oclusión de agarre manual independiente de color HSV.
-- `src/core/perception/objects/object-segmenter.js`: Extractor de silueta, máscara binaria y parches de textura para materiales 3D.
-- `src/core/perception/objects/object-tracking-engine.js`: Motor de tracking temporal, suavizado de trayectoria y profundidad monocular.
-- `src/core/perception/objects/multi-view-reconstructor.js`: Acumulador de vistas angulares y generador de geometría 3D procedimental y point cloud.
-- `src/core/perception/objects/digital-twin-manager.js`: Coordinador que vincula entidades físicas con sus gemelos virtuales digitales.
-- `src/core/perception/perception-engine.js`: Orquestador maestro que integra Hands, Body, Face y DigitalTwin.
-- `src/core/tracker.js`: Fachada HandTracker actualizada con accesores a FaceTracker y DigitalTwinManager.
+- `src/core/perception/objects/object-detector.js`: Detección multiseñal (apariencia, bordes/geometría, gradiente de movimiento con frame anterior, agarre manual y porcentaje de oclusión).
+- `src/core/perception/objects/object-tracking-engine.js`: Tracking temporal con IDs persistentes `object-001`, ciclo de vida `ACTIVE` $\to$ `OCCLUDED` $\to$ `COASTING`, extrapolación inercial y buffer de trayectoria 3D.
+- `src/core/perception/object-tracker.js`: Reemplazo del viejo tracker HSV por el motor multiseñal completo con selector de hint auxiliar.
+- `src/core/perception/perception-engine.js`: Despacho de landmarks de manos al ObjectTracker y actualización de telemetría de objetos en stats.
+- `src/core/spatial/entity.js`: Almacenamiento directo de `boundingBox`, `contour`, `trajectory` y metadata en `TrackedEntity`.
+- `src/render/hand-visualizer-3d.js`: Rig 3D para objetos con bounding box alámbrico, billboard canvas sprite (`OBJECT #001`), contorno 3D y migas de trayectoria (`• • •`).
+- `src/ui/telemetry-hud.js`: Tarjeta de telemetría **OBJECT PERCEPTION** con todas las métricas solicitadas.
+- `index.html`: Botón de control `🎯 Objetos: ON/OFF`, selector de pistas auxiliares y contenedor estructurado de telemetría.
+- `src/main.js`: Exposición de handles de diagnóstico en `window` (`__hud`, `__visualizer`, `__perceptionTracker`).
+- `test/test-object-perception.js`: Suite completa de 32 tests automáticos de integración y tracking continuo.
 
 ## Verification
-- `npm run build`: Compilación exitosa en 405ms, 59 módulos transformados, 0 errores.
-- Pruebas sintéticas en runtime vía Chrome DevTools MCP:
-  - Inicialización y candidate ingestion de `face-primary`: `headPose: {yaw: -12.4, pitch: 5.2, roll: 1.1}`, `gaze: {x: -0.15, y: 0.05}`, `mouthOpen: 0.22`, `confidence: 0.97`.
-  - Ingestion de objeto real `obj-real-cup-01` enlazado con `digitalTwinId = "twin-virtual-cup-01"`.
-  - Ingestion de gemelo digital `twin-virtual-cup-01` enlazado con `physicalSourceId = "obj-real-cup-01"`.
-  - `linkedCorrectly: true` confirmado dentro de `SpatialWorldModel`.
+- `test/test-object-perception.js`: **32/32 tests pasados exitosamente**:
+  - Persistencia de `object-001` a través de frames sucesivos.
+  - Cálculo de velocidad cinemática suave.
+  - Retención de tracking durante oclusión por agarre de mano (37% occluded, 63% visible).
+  - Predicción *dead-reckoning* durante oclusión completa y reasociación limpia.
+  - Ingestión completa en `SpatialWorldModel`.
+- `npm run build`: Compilación exitosa en 472ms, 0 errores.
+- Chrome DevTools MCP Runtime:
+  - Ingestión de `object-001` verificada con actualización en vivo del HUD (`OBJECT #001`, `ACTIVE 94%`, `31% Occlusion`) y renderizado del rig 3D con migas de pan.
 
 ## Repository
 - **GitHub:** [https://github.com/Breacorp/Air_gesture](https://github.com/Breacorp/Air_gesture)
 - **Branch:** `main`
+- **Latest Commit:** `40d880c`
