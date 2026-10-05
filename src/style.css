@@ -1409,6 +1409,170 @@ body.mode-compact .profile-nav-bar {
   box-shadow: 0 0 30px rgba(255, 0, 127, 0.65);
 }
 
+/* --- AIR GAMES LAB --- */
+.btn-games {
+  background: linear-gradient(135deg, rgba(0, 245, 212, 0.25), rgba(121, 40, 202, 0.35));
+  border: 1px solid var(--accent-cyan);
+  color: #fff;
+  transition: all 0.25s ease;
+  box-shadow: 0 0 15px rgba(0, 245, 212, 0.25);
+}
+
+.btn-games:hover {
+  background: linear-gradient(135deg, rgba(0, 245, 212, 0.45), rgba(121, 40, 202, 0.55));
+  box-shadow: 0 0 25px rgba(0, 245, 212, 0.5);
+  transform: translateY(-1px);
+}
+
+.btn-games.active {
+  background: linear-gradient(135deg, #00f5d4, #7928ca);
+  color: #070a13;
+  font-weight: 700;
+  box-shadow: 0 0 30px rgba(0, 245, 212, 0.7);
+}
+
+.games-lab-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(4, 7, 15, 0.82);
+  backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.games-lab-modal.hidden {
+  display: none !important;
+}
+
+.games-lab-dialog {
+  width: 920px;
+  max-width: 96vw;
+  height: 640px;
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  background: rgba(10, 15, 29, 0.94);
+  border: 1px solid rgba(0, 245, 212, 0.3);
+  box-shadow: 0 0 50px rgba(0, 245, 212, 0.2), 0 20px 40px rgba(0, 0, 0, 0.6);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.games-lab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.3);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.games-lab-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.games-logo {
+  font-size: 24px;
+  filter: drop-shadow(0 0 8px #00f5d4);
+}
+
+.games-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+.games-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: block;
+}
+
+.games-tabs {
+  display: flex;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.btn-game-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-game-tab:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.btn-game-tab.active {
+  background: rgba(0, 245, 212, 0.18);
+  color: #00f5d4;
+  border: 1px solid rgba(0, 245, 212, 0.4);
+  box-shadow: 0 0 12px rgba(0, 245, 212, 0.25);
+}
+
+.games-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.games-canvas-container {
+  flex: 1;
+  position: relative;
+  background: radial-gradient(circle at center, #0f172a 0%, #050811 100%);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.air-games-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+.games-lab-footer {
+  padding: 10px 18px;
+  background: rgba(0, 0, 0, 0.4);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.games-guide-pill {
+  background: rgba(0, 245, 212, 0.08);
+  border: 1px solid rgba(0, 245, 212, 0.25);
+  border-radius: 20px;
+  padding: 4px 16px;
+  font-size: 12px;
+  color: #00f5d4;
+  font-family: 'JetBrains Mono', monospace;
+}
+
 .btn-physics-gravity {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);

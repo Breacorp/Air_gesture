@@ -104,6 +104,11 @@
             <span id="physics-btn-label">Air Physics Lab</span>
           </button>
 
+          <button id="btn-toggle-games-lab" class="btn btn-secondary btn-games" title="Abrir Air Games Lab (Plataforma de Juegos Espaciales por Cámara)">
+            <span class="games-icon">🎮</span>
+            <span id="games-btn-label">Air Games</span>
+          </button>
+
           <button id="btn-compact-mode" class="btn btn-secondary" title="Minimizar UI a HUD compacto de segundo plano">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="4 14 10 14 10 20"/>
@@ -887,6 +892,43 @@
           <pre id="json-stream-code" class="code-stream font-mono">Esperando detección de manos...</pre>
         </div>
       </footer>
+
+      <!-- AIR GAMES LAB MODAL DOCK -->
+      <div id="games-lab-modal" class="games-lab-modal hidden">
+        <div class="games-lab-dialog glass-card">
+          <div class="games-lab-header">
+            <div class="games-lab-title-wrap">
+              <span class="games-logo">🎮</span>
+              <div>
+                <h2 class="games-title">AIR GAMES LAB</h2>
+                <span class="games-subtitle">Plataforma Espacial de Juegos • Cuerpo y Manos como Joystick</span>
+              </div>
+            </div>
+            <div class="games-tabs" id="games-tab-group">
+              <button class="btn-game-tab active" data-game="pong">🏓 Air Pong</button>
+              <button class="btn-game-tab" data-game="fruit_ninja">🍉 Fruit Ninja</button>
+              <button class="btn-game-tab" data-game="basketball">🏀 Air Basketball</button>
+            </div>
+            <div class="games-header-actions">
+              <button id="btn-games-sound" class="btn btn-xs btn-secondary" title="Silenciar / Activar Sonido">🔊</button>
+              <button id="btn-games-reset" class="btn btn-xs btn-secondary" title="Reiniciar Juego">🔄</button>
+              <button id="btn-close-games" class="btn btn-xs btn-danger" title="Cerrar">✕</button>
+            </div>
+          </div>
+
+          <!-- Canvas Container -->
+          <div id="games-canvas-container" class="games-canvas-container">
+            <!-- Game canvas dynamically injected here -->
+          </div>
+
+          <!-- Bottom Controls & Hints -->
+          <div class="games-lab-footer">
+            <div class="games-guide-pill" id="games-guide-pill">
+              <span id="games-guide-text">🏓 Air Pong: Mano Izquierda = Paleta Izq • Mano Derecha = Paleta Der (o vs IA)</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Camera Start Overlay Modal -->
       <div id="camera-modal" class="modal-backdrop">

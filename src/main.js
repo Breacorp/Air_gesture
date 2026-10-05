@@ -27,6 +27,9 @@ import { BlenderProfile } from './profiles/blender-profile.js';
 import { Air3DStudio } from './studio/air-3d-studio.js';
 import { SpatialDirectTouch } from './interaction/spatial-direct-touch.js';
 import { AirPhysicsLab } from './physics/air-physics-lab.js';
+import { AirGameAPI } from './games/air-game-api.js';
+import { AirGamesLab } from './games/air-games-lab.js';
+import { gameAudio } from './games/air-game-audio.js';
 
 // DOM References
 const videoEl = document.getElementById('webcam-video');
@@ -76,6 +79,11 @@ const hud = new TelemetryHUD({
   handsBadge: document.getElementById('hands-badge')
 });
 
+// Air Games Lab Platform & Universal Game Interaction API
+const airGameAPI = new AirGameAPI(tracker.worldModel, interactionEngine);
+const gamesCanvasContainer = document.getElementById('games-canvas-container');
+const gamesLab = new AirGamesLab(gamesCanvasContainer, airGameAPI);
+
 // Expose Spatial World Model globally for developer inspection
 window.__spatialWorld = tracker.worldModel;
 
@@ -111,6 +119,8 @@ window.__globalEventBus = globalEventBus;
 window.__hud = hud;
 window.__visualizer = visualizer;
 window.__perceptionTracker = tracker;
+window.__airGameAPI = airGameAPI;
+window.__gamesLab = gamesLab;
 
 // When macOS daemon reports actual screen bounds, update interaction engine
 macosAdapter.onScreenResolution = (screen) => {
@@ -357,6 +367,11 @@ tracker.setOnFrame((frameData) => {
   if (worldModel) {
     visualizer.updateFromWorldModel(worldModel);
     hud.updateWorldModelTelemetry(worldModel);
+  }
+
+  // 8. Update Air Games Lab Platform API
+  if (gamesLab && gamesLab.isRunning) {
+    airGameAPI.update(kinematicData, worldModel, now);
   }
 
   lastDetectedHands = currentFrameHands;
@@ -899,6 +914,77 @@ const btnPhysicsClear = document.getElementById('btn-physics-clear');
 if (btnPhysicsClear) {
   btnPhysicsClear.addEventListener('click', () => {
     physicsLab.clearAllObjects();
+  });
+}
+
+// ============================================================
+// AIR GAMES LAB - SPATIAL GAMING PLATFORM UI BINDINGS
+// ============================================================
+const btnToggleGamesLab = document.getElementById('btn-toggle-games-lab');
+const gamesLabModal = document.getElementById('games-lab-modal');
+const btnCloseGames = document.getElementById('btn-close-games');
+const btnGamesSound = document.getElementById('btn-games-sound');
+const btnGamesReset = document.getElementById('btn-games-reset');
+const gamesTabGroup = document.getElementById('games-tab-group');
+const gamesGuideText = document.getElementById('games-guide-text');
+
+const gameGuides = {
+  pong: '🏓 Air Pong: Mano Izquierda = Paleta Izq • Mano Derecha = Paleta Der (o vs IA)',
+  fruit_ninja: '🍉 Fruit Ninja: Mueve tu mano a alta velocidad para cortar frutas con el filo espacial • ¡Evita las bombas!',
+  basketball: '🏀 Air Basketball: Acerca la mano a la pelota y pellizca (🤏) para agarrar • Lanza hacia el aro'
+};
+
+function toggleGamesLab(forceState = null) {
+  if (!gamesLabModal) return;
+  const isHidden = gamesLabModal.classList.contains('hidden');
+  const nextState = forceState !== null ? forceState : isHidden;
+
+  gamesLabModal.classList.toggle('hidden', !nextState);
+  if (btnToggleGamesLab) {
+    btnToggleGamesLab.classList.toggle('active', nextState);
+    const label = document.getElementById('games-btn-label');
+    if (label) label.textContent = nextState ? 'Games: Activo' : 'Air Games';
+  }
+
+  if (nextState) {
+    gamesLab.start();
+  } else {
+    gamesLab.stop();
+  }
+}
+
+if (btnToggleGamesLab) {
+  btnToggleGamesLab.addEventListener('click', () => toggleGamesLab());
+}
+
+if (btnCloseGames) {
+  btnCloseGames.addEventListener('click', () => toggleGamesLab(false));
+}
+
+if (btnGamesSound) {
+  btnGamesSound.addEventListener('click', () => {
+    const isMuted = gameAudio.toggleMute();
+    btnGamesSound.textContent = isMuted ? '🔇' : '🔊';
+  });
+}
+
+if (btnGamesReset) {
+  btnGamesReset.addEventListener('click', () => {
+    gamesLab.resetCurrentGame();
+  });
+}
+
+if (gamesTabGroup) {
+  gamesTabGroup.addEventListener('click', (e) => {
+    const btn = e.target.closest('.btn-game-tab');
+    if (!btn) return;
+    const game = btn.dataset.game;
+    gamesTabGroup.querySelectorAll('.btn-game-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    gamesLab.setActiveGame(game);
+    if (gamesGuideText && gameGuides[game]) {
+      gamesGuideText.textContent = gameGuides[game];
+    }
   });
 }
 
