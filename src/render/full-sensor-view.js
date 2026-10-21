@@ -282,9 +282,28 @@ export class FullSensorView {
     const isRight = handedness.toLowerCase() === 'right';
     const mainColor = isRight ? '#00f5d4' : '#ff007f';
 
+    // Compute apparent hand scale from wrist (0) to middle MCP (9) and palm width (5 to 17)
+    let apparentSpan = 0.15;
+    if (landmarks.length >= 21) {
+      const dWristMid = Math.hypot(landmarks[9].x - landmarks[0].x, landmarks[9].y - landmarks[0].y);
+      const dPalm = Math.hypot(landmarks[17].x - landmarks[5].x, landmarks[17].y - landmarks[5].y);
+      apparentSpan = Math.max(0.04, (dWristMid + dPalm) * 0.5);
+    }
+    // Scale factor: baseline span ~0.15 on normalized camera frame
+    const scaleFactor = Math.max(0.4, Math.min(2.8, apparentSpan / 0.14));
+
+    // Dynamic perspective-scaled strokes and joint radii:
+    // When close to camera: thicker, solid and prominent (no thin wire lines)
+    // When far from camera: thinner and delicate (no blob overlapping or obscuring the hand)
+    const boneLineWidth = Math.max(1.5, Math.min(6.5, 2.5 * scaleFactor));
+    const jointRadius = Math.max(1.5, Math.min(5.5, 2.5 * scaleFactor));
+    const tipRadius = Math.max(2.2, Math.min(8.0, 4.0 * scaleFactor));
+
     // Draw Hand Bones
     ctx.strokeStyle = mainColor;
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = boneLineWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     for (const [aIdx, bIdx] of HAND_CONNECTIONS) {
       const a = landmarks[aIdx];
       const b = landmarks[bIdx];
@@ -305,7 +324,7 @@ export class FullSensorView {
       const isTip = [4, 8, 12, 16, 20].includes(i);
       ctx.fillStyle = isTip ? '#ffffff' : mainColor;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, isTip ? 4 : 2.5, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, isTip ? tipRadius : jointRadius, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -313,9 +332,9 @@ export class FullSensorView {
     if (pose.isPinchThumbIndex && landmarks[8]) {
       const p = this.project(landmarks[8].x, landmarks[8].y);
       ctx.strokeStyle = '#ffd166';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = Math.max(1.8, 2.2 * scaleFactor);
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 12, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, Math.max(6, 12 * scaleFactor), 0, Math.PI * 2);
       ctx.stroke();
     }
 

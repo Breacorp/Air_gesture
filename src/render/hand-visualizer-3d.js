@@ -252,6 +252,10 @@ export class HandVisualizer3D {
     kinematicState.pinchWorld = new THREE.Vector3().addVectors(rig.joints[8].position, rig.joints[4].position).multiplyScalar(0.5);
     kinematicState.palmWorld = new THREE.Vector3().addVectors(rig.joints[0].position, rig.joints[5].position).add(rig.joints[17].position).divideScalar(3);
 
+    // Compute hand scale factor for coherent 3D thickness
+    const scaleFactor = Math.max(0.4, Math.min(2.5, kinematicState.scale?.scaleFactor || 1.0));
+    const boneThickness = Math.max(0.008, Math.min(0.035, 0.016 * scaleFactor));
+
     // Update Bone Cylinders between joints
     for (let i = 0; i < HAND_CONNECTIONS.length; i++) {
       const [idxA, idxB] = HAND_CONNECTIONS[i];
@@ -262,7 +266,7 @@ export class HandVisualizer3D {
       bone.position.copy(posA);
       bone.lookAt(posB);
       const distance = posA.distanceTo(posB);
-      bone.scale.set(1, 1, Math.max(0.001, distance));
+      bone.scale.set(boneThickness / 0.015, boneThickness / 0.015, Math.max(0.001, distance));
     }
 
     // Update Palm Normal Vector Arrow

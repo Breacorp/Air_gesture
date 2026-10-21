@@ -9,7 +9,7 @@
 
 export class GenericObjectTracker {
   constructor(options = {}) {
-    this.enabled = options.enabled !== undefined ? options.enabled : true;
+    this.enabled = options.enabled !== undefined ? options.enabled : false;
     this.mirror = options.mirror !== undefined ? options.mirror : true;
     this.procWidth = 160;
     this.procHeight = 120;
@@ -98,10 +98,13 @@ export class GenericObjectTracker {
           maxY: Math.max(...lms.map(l => l.y))
         };
 
-        // Sample pixels around pinch/grasp zone in the downscaled image
-        const sampleCenterX = Math.round(((indexTip.x + thumbTip.x) / 2) * w);
+        // Object in hand grasp or fingertip zone
+        // If hand landmarks are mirrored, map X back to unmirrored camera frame space for image sampling
+        const lmIndexX = this.mirror ? (1.0 - indexTip.x) : indexTip.x;
+        const lmThumbX = this.mirror ? (1.0 - thumbTip.x) : thumbTip.x;
+        const sampleCenterX = Math.round(((lmIndexX + lmThumbX) / 2) * w);
         const sampleCenterY = Math.round(((indexTip.y + thumbTip.y) / 2) * h);
-        const radius = Math.round(18);
+        const radius = Math.round(14);
 
         let nonSkinCount = 0;
         let totalCount = 0;
@@ -120,8 +123,8 @@ export class GenericObjectTracker {
             const g = data[idx + 1];
             const b = data[idx + 2];
 
-            // Basic skin tone exclusion: skin typically has r > g > b
-            const isSkin = (r > 60 && g > 40 && b > 20 && r > g && g > b && (r - g) > 10);
+            // Robust skin tone detection (avoids classifying skin folds, palms or shadows as objects)
+            const isSkin = (r > 50 && g > 35 && b > 20 && r > g && (r - g) >= 8 && Math.abs(r - b) >= 10);
 
             if (!isSkin) {
               nonSkinCount++;
@@ -134,20 +137,27 @@ export class GenericObjectTracker {
           }
         }
 
-        // If at least 25% of grasp zone is a non-skin object (pen, tool, prop, cup, phone)
-        if (totalCount > 0 && (nonSkinCount / totalCount) > 0.25 && maxX > minX && maxY > minY) {
-          const uCenter = (minX + maxX) / (2 * w);
+        // Require substantial non-skin presence (>55%) and minimum cluster spread to avoid false positive shadows
+        const clusterW = maxX - minX;
+        const clusterH = maxY - minY;
+        if (totalCount > 15 && (nonSkinCount / totalCount) > 0.55 && clusterW >= 8 && clusterH >= 8) {
+          let uCenter = (minX + maxX) / (2 * w);
+          if (this.mirror) {
+            uCenter = 1.0 - uCenter;
+          }
           const vCenter = (minY + maxY) / (2 * h);
           detectedCentroid = { x: uCenter, y: vCenter, z: 0.5 };
+          const minNormX = this.mirror ? (1.0 - maxX / w) : (minX / w);
+          const maxNormX = this.mirror ? (1.0 - minX / w) : (maxX / w);
           detectedBox = {
-            minX: minX / w,
+            minX: Math.min(minNormX, maxNormX),
             minY: minY / h,
-            maxX: maxX / w,
+            maxX: Math.max(minNormX, maxNormX),
             maxY: maxY / h,
-            width: (maxX - minX) / w,
-            height: (maxY - minY) / h
+            width: clusterW / w,
+            height: clusterH / h
           };
-          detectedConfidence = Math.min(0.95, 0.72 + (nonSkinCount / totalCount) * 0.25);
+          detectedConfidence = Math.min(0.95, 0.70 + (nonSkinCount / totalCount) * 0.25);
           objectFound = true;
         }
       }

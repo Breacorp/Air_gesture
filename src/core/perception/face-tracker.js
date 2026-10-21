@@ -187,7 +187,9 @@ export class FaceTracker {
     // Yaw (Left/Right rotation)
     const midX = (leftCheek.x + rightCheek.x) / 2;
     const cheekWidth = Math.abs(rightCheek.x - leftCheek.x) || 0.001;
-    const yaw = ((nose.x - midX) / (cheekWidth * 0.5)) * 45; // Approx degrees [-45..45]
+    // When mirrored on screen, turning head to user's right points nose towards positive screen X (+yaw)
+    const rawYaw = ((nose.x - midX) / (cheekWidth * 0.5)) * 45;
+    const yaw = this.mirror ? -rawYaw : rawYaw;
 
     // Pitch (Up/Down tilt)
     const midY = (forehead.y + chin.y) / 2;

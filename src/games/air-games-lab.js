@@ -97,31 +97,56 @@ export class AirGamesLab {
   // --- API HOOKS & GESTURE DISPATCH ---
 
   _setupAPIListeners() {
+    // Active Hand Pointers for feedback
+    this.handCursors = {
+      left: { x: 0, y: 0, active: false, pinching: false, lastSeen: 0 },
+      right: { x: 0, y: 0, active: false, pinching: false, lastSeen: 0 }
+    };
+
     // 1. Hand Move: Control Pong Paddles & Basketball Aim
     this.api.on('hand.move', (e) => {
       if (!this.isRunning || this.isPaused) return;
 
+      const normX = e.position.x; // [0..1]
       const normY = e.position.y; // [0..1]
+      const screenX = normX * this.width;
       const screenY = normY * this.height;
 
+      // Update cursor position & activity
+      if (this.handCursors[e.hand]) {
+        this.handCursors[e.hand].x = screenX;
+        this.handCursors[e.hand].y = screenY;
+        this.handCursors[e.hand].pinching = e.pinching || false;
+        this.handCursors[e.hand].active = true;
+        this.handCursors[e.hand].lastSeen = performance.now();
+      }
+
       // Pong: Left Hand -> Left Paddle, Right Hand -> Right Paddle
+      // If only one hand is in the air, let it control the paddle on its side, or left if playing solo vs AI
       if (this.activeGame === 'pong') {
-        const p = this.pong.paddles[e.hand];
-        if (p) {
-          const prevY = p.y;
-          p.y = Math.max(p.height / 2, Math.min(this.height - p.height / 2, screenY));
-          p.vy = p.y - prevY;
+        let targetPaddle = this.pong.paddles[e.hand];
+        if (this.api.world.hands.count <= 1) {
+          // If only 1 hand active, allow controlling whichever side is closest or left paddle by default
+          targetPaddle = this.pong.paddles.left;
+        }
+
+        if (targetPaddle) {
+          const prevY = targetPaddle.y;
+          targetPaddle.y = Math.max(targetPaddle.height / 2, Math.min(this.height - targetPaddle.height / 2, screenY));
+          targetPaddle.vy = targetPaddle.y - prevY;
         }
       }
 
       // Record visual trail for Fruit Ninja
       const trail = this.handTrails[e.hand];
-      trail.push({ x: e.position.x * this.width, y: screenY, time: performance.now() });
-      if (trail.length > 14) trail.shift();
+      if (trail) {
+        trail.push({ x: screenX, y: screenY, time: performance.now() });
+        if (trail.length > 14) trail.shift();
+      }
 
       // Basketball: If ball is held by this hand, move with hand
       if (this.activeGame === 'basketball' && this.basketball.ball.isHeld && this.basketball.ball.heldByHand === e.hand) {
-        this.basketball.ball.x = e.position.x * this.width;
+        this.basketball.ball.x = screenX;
         this.basketball.ball.y = screenY;
         this.basketball.ball.vx = e.velocity.vx * this.width * 0.05;
         this.basketball.ball.vy = e.velocity.vy * this.height * 0.05;
@@ -136,14 +161,17 @@ export class AirGamesLab {
       }
     });
 
-    // 3. Hand Grab & Pinch: Basketball Pickup
+    // 3. Hand Grab & Pinch: Basketball Pickup (generous 100px radius for natural feel)
     this.api.on('hand.pinch', (e) => {
       if (!this.isRunning || this.isPaused) return;
+      if (this.handCursors[e.hand]) {
+        this.handCursors[e.hand].pinching = true;
+      }
       if (this.activeGame === 'basketball' && !this.basketball.ball.inFlight) {
         const handX = e.position.x * this.width;
         const handY = e.position.y * this.height;
         const dist = Math.hypot(handX - this.basketball.ball.x, handY - this.basketball.ball.y);
-        if (dist < 70) {
+        if (dist < 100) {
           this.basketball.ball.isHeld = true;
           this.basketball.ball.heldByHand = e.hand;
           gameAudio.playBounce(0.5);
@@ -154,6 +182,9 @@ export class AirGamesLab {
     // 4. Hand Release: Basketball Throw
     this.api.on('hand.release', (e) => {
       if (!this.isRunning || this.isPaused) return;
+      if (this.handCursors[e.hand]) {
+        this.handCursors[e.hand].pinching = false;
+      }
       if (this.activeGame === 'basketball' && this.basketball.ball.isHeld && this.basketball.ball.heldByHand === e.hand) {
         this._throwBasketball(e);
       }
@@ -226,6 +257,7 @@ export class AirGamesLab {
 
       this._renderParticles();
       this._renderHandTrails();
+      this._renderHandCursors(now);
     }
 
     requestAnimationFrame(() => this._loop());
@@ -779,6 +811,44 @@ export class AirGamesLab {
         this.ctx.lineTo(p2.x, p2.y);
         this.ctx.stroke();
       }
+      this.ctx.restore();
+    }
+  }
+
+  _renderHandCursors(now) {
+    for (const [side, cursor] of Object.entries(this.handCursors)) {
+      if (!cursor.active) continue;
+      if (now - cursor.lastSeen > 350) {
+        cursor.active = false;
+        continue;
+      }
+
+      const color = side === 'left' ? '#ff007f' : '#00f5d4';
+      this.ctx.save();
+
+      // Outer reticle circle
+      this.ctx.strokeStyle = color;
+      this.ctx.lineWidth = cursor.pinching ? 3 : 1.5;
+      this.ctx.beginPath();
+      this.ctx.arc(cursor.x, cursor.y, cursor.pinching ? 16 : 24, 0, Math.PI * 2);
+      this.ctx.stroke();
+
+      // Inner dot
+      this.ctx.fillStyle = cursor.pinching ? '#ffd166' : color;
+      this.ctx.beginPath();
+      this.ctx.arc(cursor.x, cursor.y, cursor.pinching ? 6 : 4, 0, Math.PI * 2);
+      this.ctx.fill();
+
+      // Text indicator
+      this.ctx.font = '10px "JetBrains Mono", monospace';
+      this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      this.ctx.textAlign = 'center';
+      this.ctx.fillText(
+        `${side.toUpperCase()}${cursor.pinching ? ' [PINCH]' : ''}`,
+        cursor.x,
+        cursor.y - 28
+      );
+
       this.ctx.restore();
     }
   }

@@ -122,14 +122,48 @@ export class AirGameAPI {
   }
 
   _processHands(kinematicData, timestamp) {
-    for (const hand of kinematicData) {
+    if (!kinematicData) return;
+
+    // Support both Array format and Object dictionary { Left, Right } format
+    let handsList = [];
+    if (Array.isArray(kinematicData)) {
+      handsList = kinematicData;
+    } else if (typeof kinematicData === 'object') {
+      if (kinematicData.Left) handsList.push(kinematicData.Left);
+      if (kinematicData.Right) handsList.push(kinematicData.Right);
+    }
+
+    for (const hand of handsList) {
+      if (!hand) continue;
       const side = (hand.handedness || 'right').toLowerCase();
+
+      // Extract normalized screen coordinates [0..1]
+      // Priority 1: screenPoints (exact pixel-normalized landmarks 9 = palm center, 0 = wrist)
+      // Priority 2: wrist / palm centered coordinates [-1..1] converted to [0..1]
+      let posX = 0.5;
+      let posY = 0.5;
+
+      if (hand.screenPoints && hand.screenPoints.length > 9) {
+        posX = hand.screenPoints[9].u;
+        posY = hand.screenPoints[9].v;
+      } else if (hand.screenPoints && hand.screenPoints.length > 0) {
+        posX = hand.screenPoints[0].u;
+        posY = hand.screenPoints[0].v;
+      } else if (hand.palm?.position) {
+        posX = hand.palm.position.x * 0.5 + 0.5;
+        posY = -hand.palm.position.y * 0.5 + 0.5;
+      } else if (hand.wrist?.position) {
+        posX = hand.wrist.position.x * 0.5 + 0.5;
+        posY = -hand.wrist.position.y * 0.5 + 0.5;
+      }
+
       const pos = {
-        x: hand.palm?.center?.x || hand.wrist?.position?.x || 0.5,
-        y: hand.palm?.center?.y || hand.wrist?.position?.y || 0.5,
+        x: Math.max(0, Math.min(1, posX)),
+        y: Math.max(0, Math.min(1, posY)),
         z: hand.scale?.relativeDepth || hand.scale?.calibratedZ || 0
       };
 
+      // Velocity in normalized units / second
       const vel = {
         vx: hand.wrist?.velocity?.vx || 0,
         vy: hand.wrist?.velocity?.vy || 0,
@@ -137,9 +171,9 @@ export class AirGameAPI {
         speed: hand.wrist?.speed || Math.hypot(hand.wrist?.velocity?.vx || 0, hand.wrist?.velocity?.vy || 0)
       };
 
-      const isPinching = !!hand.pose?.isPinchThumbIndex;
+      const isPinching = !!(hand.pose?.isPinchThumbIndex || hand.pose?.isPinchThumbMiddle);
       const pinchStrength = hand.pose?.pinchStrengthThumbIndex || 0;
-      const isGrabbed = !!hand.pose?.isFist || pinchStrength > 0.8;
+      const isGrabbed = !!(hand.pose?.isFist || pinchStrength > 0.75);
 
       // Event: hand.move
       this.emit('hand.move', {
@@ -165,7 +199,7 @@ export class AirGameAPI {
       // Event: hand.grab / hand.release
       if (isGrabbed) {
         this.emit('hand.grab', { hand: side, position: pos, velocity: vel, timestamp });
-      } else if (prevPinch || vel.speed > 0.25) {
+      } else if (prevPinch || isGrabbed || vel.speed > 0.3) {
         this.emit('hand.release', { hand: side, position: pos, velocity: vel, timestamp });
       }
 

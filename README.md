@@ -90,8 +90,16 @@ El `Motion Engine` no depende de MediaPipe ni asume que el $Z$ de la cámara sea
 
 El servidor de desarrollo ya está corriendo en:
 ```text
-http://127.0.0.1:5173/
+http://127.0.0.1:5180/
 ```
+
+### Landing de Air Gesture
+
+La landing de Moderno Tech está disponible en `/air-gesture/` y enlaza con la aplicación en `/`.
+El build de Vite incluye ambas páginas, el logotipo oficial de Moderno Tech y una captura real
+de la pantalla de inicio de Air Gesture. No hay un instalador ni una versión descargable publicados
+en este proyecto; la landing lo indica en su sección de descarga. Los enlaces a sus recursos son
+relativos, para facilitar su publicación futura bajo un dominio o subdominio.
 
 ### Características de la Fase 1
 1. **100% Local y Offline**: Archivos WASM y el modelo `hand_landmarker.task` residen en `public/`, sin dependencias externas.

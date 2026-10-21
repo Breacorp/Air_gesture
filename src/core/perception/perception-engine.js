@@ -40,7 +40,7 @@ export class PerceptionEngine {
     });
     this.bodyTracker = new BodyTracker({ enabled: true });
     this.faceTracker = new FaceTracker({ enabled: true });
-    this.genericObjectTracker = new GenericObjectTracker({ enabled: true });
+    this.genericObjectTracker = new GenericObjectTracker({ enabled: false });
     this.digitalTwinManager = new DigitalTwinManager({ enabled: false });
     this.objectTracker = new ObjectTracker({ enabled: false });
     this.depthEstimator = new DepthEstimator({ enabled: false });
@@ -155,7 +155,20 @@ export class PerceptionEngine {
     if (preset) {
       this.objectTracker.setColorPreset(preset);
     }
-    return this.objectTracker.toggle();
+    const isEnabled = this.objectTracker.toggle();
+    this.genericObjectTracker.enabled = isEnabled;
+    if (!isEnabled) {
+      this.genericObjectTracker.disable();
+      this.worldModel.removeEntity('object-001');
+      const objs = this.worldModel.getEntitiesByType('object');
+      for (const o of objs) {
+        this.worldModel.removeEntity(o.id);
+      }
+      this.stats.detectedObjectsCount = 0;
+      this.diagnostics.object.detected = false;
+      this.diagnostics.object.status = 'DISABLED';
+    }
+    return isEnabled;
   }
 
   setObjectColorPreset(preset) {
