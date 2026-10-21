@@ -1,13 +1,9 @@
 const CACHE_NAME = 'air-gesture-shell-__AIR_GESTURE_CACHE_VERSION__';
+const OFFLINE_CACHE_NAME = 'air-gesture-offline-resources';
 const BUILD_ASSETS = "__AIR_GESTURE_BUILD_ASSETS__";
-const PRECACHE_ASSETS = Array.isArray(BUILD_ASSETS) ? BUILD_ASSETS : [];
+const LANDING_ASSETS = Array.isArray(BUILD_ASSETS.landing) ? BUILD_ASSETS.landing : [];
 const APP_SHELL = [
   '/',
-  '/index.html',
-  '/app/',
-  '/app/index.html',
-  '/air-gesture/',
-  '/air-gesture/index.html',
   '/manifest.webmanifest',
   '/moderno-logo.png',
   '/moderno-logo-192.png',
@@ -29,7 +25,7 @@ const OFFLINE_RESOURCES = [
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE_NAME);
-    await cache.addAll([...new Set([...APP_SHELL, ...PRECACHE_ASSETS])]);
+    await cache.addAll([...new Set([...APP_SHELL, ...LANDING_ASSETS])]);
     await self.skipWaiting();
   })());
 });
@@ -37,8 +33,17 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter((key) => key.startsWith('air-gesture-') && key !== CACHE_NAME)
-      .map((key) => caches.delete(key)));
+    const oldShellCaches = keys.filter((key) => key.startsWith('air-gesture-shell-') && key !== CACHE_NAME);
+    const offlineCache = await caches.open(OFFLINE_CACHE_NAME);
+    for (const oldCacheName of oldShellCaches) {
+      const oldCache = await caches.open(oldCacheName);
+      for (const resource of OFFLINE_RESOURCES) {
+        if (await offlineCache.match(resource)) continue;
+        const response = await oldCache.match(resource);
+        if (response) await offlineCache.put(resource, response);
+      }
+      await caches.delete(oldCacheName);
+    }
     await self.clients.claim();
   })());
 });
@@ -53,21 +58,26 @@ self.addEventListener('fetch', (event) => {
       try {
         const response = await fetch(request);
         if (response.ok) {
-          const cache = await caches.open(CACHE_NAME);
+          const cacheName = OFFLINE_RESOURCES.includes(url.pathname) ? OFFLINE_CACHE_NAME : CACHE_NAME;
+          const cache = await caches.open(cacheName);
           await cache.put(request, response.clone());
         }
         return response;
       } catch {
-        const pathname = url.pathname.startsWith('/air-gesture')
-          ? '/air-gesture/index.html'
-          : url.pathname.startsWith('/app')
-            ? '/app/index.html'
-            : '/index.html';
-        return (await caches.match(request)) || (await caches.match(pathname)) ||
-          new Response('Air Gesture no está disponible sin conexión. Abrí la aplicación online y prepará los recursos offline primero.', {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+
+        if (url.pathname.startsWith('/app')) {
+          return new Response('La aplicación todavía no está guardada en este dispositivo. Con conexión, abrí Air Gesture y prepará los recursos offline.', {
             status: 503,
             headers: { 'Content-Type': 'text/plain; charset=utf-8' }
           });
+        }
+
+        return (await caches.match('/')) || new Response('Air Gesture no está disponible sin conexión.', {
+          status: 503,
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+        });
       }
     })());
     return;
@@ -105,7 +115,7 @@ self.addEventListener('message', (event) => {
     event.waitUntil((async () => {
       const missing = [];
       for (const resource of OFFLINE_RESOURCES) {
-        if (!await caches.match(resource, { cacheName: CACHE_NAME })) missing.push(resource);
+        if (!await caches.match(resource, { cacheName: OFFLINE_CACHE_NAME })) missing.push(resource);
       }
       reply({
         type: 'offline-status',
@@ -119,7 +129,7 @@ self.addEventListener('message', (event) => {
 
   if (event.data?.type === 'prepare-offline') {
     event.waitUntil((async () => {
-      const cache = await caches.open(CACHE_NAME);
+      const cache = await caches.open(OFFLINE_CACHE_NAME);
       try {
         for (let index = 0; index < OFFLINE_RESOURCES.length; index += 1) {
           const resource = OFFLINE_RESOURCES[index];

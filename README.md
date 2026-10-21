@@ -109,6 +109,11 @@ archivos generados durante el build; el seguimiento utiliza modelos y WASM local
 El procesamiento de cámara y gestos es local. La primera visita/preparación sí descarga los
 recursos desde el sitio; una vez preparada, la app puede ejecutarse offline sin solicitudes al
 servidor durante el uso.
+El service worker guarda primero la landing, sin descargar el bundle de la aplicación. El bundle
+se descarga y se guarda al abrir `/app/`; los modelos y recursos WASM (aprox. 50 MB) solo se
+descargan al usar la app o elegir «Preparar para usar offline». Vercel entrega archivos estáticos:
+no recibe video ni realiza inferencias. Los modelos preparados se guardan en un caché local separado
+y se conservan al actualizar el shell de la aplicación.
 
 ### Características de la Fase 1
 1. **100% Local y Offline**: Archivos WASM y el modelo `hand_landmarker.task` residen en `public/`, sin dependencias externas.

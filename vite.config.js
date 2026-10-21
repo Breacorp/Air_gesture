@@ -29,9 +29,11 @@ function offlinePrecachePlugin() {
       const workerPath = resolve(directory, 'service-worker.js');
       const worker = await readFile(workerPath, 'utf8');
       const assets = Object.keys(bundle)
-        .filter((file) => file !== 'index.html' && /\.(?:html|js|css|png|svg|webmanifest)$/i.test(file))
+        .filter((file) => /\.(?:js|css|png|svg|webmanifest)$/i.test(file))
         .map((file) => `/${file}`);
-      assets.push('/index.html', '/app/index.html');
+      const appAssets = assets.filter((file) => file.startsWith('/assets/app-'));
+      const landingAssets = assets.filter((file) => !appAssets.includes(file));
+      const assetManifest = { landing: landingAssets };
       const assetMarker = '"__AIR_GESTURE_BUILD_ASSETS__"';
       const versionMarker = '__AIR_GESTURE_CACHE_VERSION__';
       const fingerprintFiles = [
@@ -58,7 +60,7 @@ function offlinePrecachePlugin() {
         return `${file}:${size}:${mtimeMs}`;
       }));
       const cacheVersion = createHash('sha256')
-        .update([...assets, ...fileMetadata].join('\n'))
+        .update([...assets, ...fileMetadata, worker].join('\n'))
         .digest('hex')
         .slice(0, 12);
 
@@ -69,7 +71,7 @@ function offlinePrecachePlugin() {
       await writeFile(
         workerPath,
         worker
-          .replace(assetMarker, JSON.stringify(assets))
+          .replace(assetMarker, JSON.stringify(assetManifest))
           .replace(versionMarker, cacheVersion)
       );
     }
