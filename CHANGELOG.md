@@ -4,18 +4,21 @@
 
 ### Added
 
+- `src/theme-toggle.js` — persistent light/dark theme control for the Air Gesture landing.
 - `air-gesture/index.html` — landing page for Air Gesture, presented as a Moderno Tech product.
 - `public/manifest.webmanifest` — install metadata for the Air Gesture web app.
 - `src/offline-ui.js` — PWA install and offline preparation controls.
 - `public/service-worker.js` — app-shell caching and explicit local model preparation.
 - `vercel.json` — routes the product landing to the subdomain root and the application to `/app`.
-- `air-gesture/landing.css` — responsive landing styles with Moderno Tech light and dark themes.
+- `air-gesture/landing.css` — responsive landing styles with selectable Moderno Tech light and dark themes.
 - `public/moderno-logo.png` — optimized official Moderno Tech logo for the landing.
 - `public/moderno-logo-192.png` and `public/moderno-logo-512.png` — PWA icons using the official Moderno Tech mark.
 - `public/air-gesture-onboarding.png` — authentic Air Gesture startup screen capture.
 
 ### Changed
 
+- `air-gesture/index.html` — adds a theme control and applies the saved or system theme before rendering.
+- `air-gesture/landing.css` — supports explicit light and dark themes and keeps the theme control responsive.
 - `air-gesture/index.html` and `air-gesture/landing.css` — explain web and installable PWA modes, offline preparation, requirements, current release limitations, and responsive landing layouts.
 - `index.html` — loads the PWA manifest and offline setup script without remote font dependencies.
 - `vite.config.js` — builds the landing at `/` and the app at `/app`, versions the offline cache, and includes generated bundles in the service worker precache manifest.

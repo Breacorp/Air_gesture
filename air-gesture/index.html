@@ -7,12 +7,20 @@
       name="description"
       content="Air Gesture es el control gestual e interacción espacial de Moderno Tech. Interactuá con tu computadora usando las manos, sin tocarla."
     />
-    <meta name="theme-color" content="#F8FAFC" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0B0B10" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#0B0B10" id="theme-color" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>Air Gesture — Moderno Tech</title>
     <link rel="icon" href="../moderno-logo.png" type="image/png" />
-    <link rel="stylesheet" href="./landing.css" />
+    <script>
+      const savedTheme = localStorage.getItem("air-gesture-theme");
+      document.documentElement.dataset.theme =
+        savedTheme === "light" || savedTheme === "dark"
+          ? savedTheme
+          : matchMedia("(prefers-color-scheme: light)").matches
+            ? "light"
+            : "dark";
+    </script>
+    <link rel="stylesheet" href="/air-gesture/landing.css" />
   </head>
   <body>
     <a class="skip-link" href="#contenido">Ir al contenido</a>
@@ -33,7 +41,19 @@
         <a href="#descarga">Modalidades</a>
       </nav>
 
-      <a class="header-cta" href="/app/">Probar web <span aria-hidden="true">↗</span></a>
+      <div class="header-actions">
+        <button class="theme-toggle" type="button" data-theme-toggle aria-label="Cambiar tema">
+          <svg class="theme-icon-light" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <circle cx="10" cy="10" r="3.5" />
+            <path d="M10 1.5v2M10 16.5v2M18.5 10h-2M3.5 10h-2m14.5-6-1.4 1.4M5.4 14.6 4 16m12 0-1.4-1.4M5.4 5.4 4 4" />
+          </svg>
+          <svg class="theme-icon-dark" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M16.5 12.3A7 7 0 0 1 7.7 3.5a7 7 0 1 0 8.8 8.8Z" />
+          </svg>
+          <span data-theme-label>Modo claro</span>
+        </button>
+        <a class="header-cta" href="/app/">Probar web <span aria-hidden="true">↗</span></a>
+      </div>
     </header>
 
     <main id="contenido">
@@ -319,6 +339,7 @@
         <a class="footer-link" href="https://moderno.com.ar/">Volver a Moderno Tech <span aria-hidden="true">↗</span></a>
       </div>
     </footer>
+    <script type="module" src="/src/theme-toggle.js"></script>
     <script type="module" src="/src/offline-ui.js"></script>
   </body>
 </html>
