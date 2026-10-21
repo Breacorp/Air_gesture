@@ -20,3 +20,4 @@
 - `src/games/air-games-lab.js` — updates game controls and hand-pointer feedback.
 - `src/render/full-sensor-view.js` — scales hand visualization to apparent hand size.
 - `src/render/hand-visualizer-3d.js` — scales 3D bone thickness with hand size.
+- `test/test-perception-debug.js` — expects the generic object tracker to be disabled by default.

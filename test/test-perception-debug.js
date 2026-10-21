@@ -34,7 +34,7 @@ function assert(condition, message) {
 // ==========================================
 console.log('--- Test 1: Generic Object Tracker ---');
 const genericTracker = new GenericObjectTracker();
-assert(genericTracker.enabled === true, 'GenericObjectTracker is enabled by default');
+assert(genericTracker.enabled === false, 'GenericObjectTracker is disabled by default');
 assert(genericTracker.track.id === 'object-001', 'Default track ID is object-001');
 
 // Mock Hand Holding Object (Tool in hand grasp)
