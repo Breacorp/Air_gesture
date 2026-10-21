@@ -17,7 +17,7 @@
 
 ### Changed
 
-- `src/core/perception/camera-manager.js` — checks camera support before model initialization and reports secure-context and permission failures instead of returning an empty active camera.
+- `src/core/perception/camera-manager.js` — checks camera support before model initialization and gives Mac users the loopback URL to use when a LAN HTTP address blocks camera access.
 - `src/core/perception/perception-engine.js` — stops the camera and reports an error when Safari provides no playable video frames.
 - `src/main.js` — checks browser camera access before downloading or initializing perception models.
 - `test/test-camera-manager.js` — covers insecure origins, camera permission failures, and Safari inline playback settings.

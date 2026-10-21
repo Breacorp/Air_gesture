@@ -43,7 +43,7 @@ export class CameraManager {
     const isInsecureContext = typeof window !== 'undefined' && !window.isSecureContext;
     throw new Error(
       isInsecureContext
-        ? 'El navegador solo permite usar la cámara en una conexión segura. Abrí Air Gesture desde su dirección HTTPS; una IP local con HTTP no puede acceder a la cámara.'
+        ? 'Esta dirección no permite usar la cámara. En esta Mac, abrí http://127.0.0.1:5180/app/; desde otro dispositivo, usá una dirección HTTPS. La IP local por HTTP no habilita la cámara.'
         : 'Este navegador no ofrece acceso a la cámara. Abrí Air Gesture en una versión actual de Safari.'
     );
   }

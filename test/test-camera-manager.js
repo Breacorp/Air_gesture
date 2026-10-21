@@ -17,8 +17,8 @@ try {
   setGlobal('navigator', { mediaDevices: undefined });
   setGlobal('window', { isSecureContext: false });
   const insecureManager = new CameraManager();
-  assert.throws(() => insecureManager.assertSupported(), /HTTPS|conexión segura|HTTP/i);
-  await assert.rejects(insecureManager.startCamera(), /HTTPS|conexión segura|HTTP/i);
+  assert.throws(() => insecureManager.assertSupported(), /127\.0\.0\.1:5180\/app\/.*HTTPS.*IP local por HTTP/i);
+  await assert.rejects(insecureManager.startCamera(), /127\.0\.0\.1:5180\/app\//);
   console.log('  ✅ Insecure origins fail with an HTTPS camera requirement');
 
   let deniedRequestCount = 0;
