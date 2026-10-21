@@ -5,14 +5,22 @@
 ### Added
 
 - `air-gesture/index.html` — landing page for Air Gesture, presented as a Moderno Tech product.
+- `public/manifest.webmanifest` — install metadata for the Air Gesture web app.
+- `src/offline-ui.js` — PWA install and offline preparation controls.
+- `public/service-worker.js` — app-shell caching and explicit local model preparation.
 - `air-gesture/landing.css` — responsive landing styles with Moderno Tech light and dark themes.
 - `public/moderno-logo.png` — optimized official Moderno Tech logo for the landing.
+- `public/moderno-logo-192.png` and `public/moderno-logo-512.png` — PWA icons using the official Moderno Tech mark.
 - `public/air-gesture-onboarding.png` — authentic Air Gesture startup screen capture.
 
 ### Changed
 
-- `README.md` — documents the landing route and its publication assets.
-- `vite.config.js` — builds the application and landing as separate pages.
+- `air-gesture/index.html` and `air-gesture/landing.css` — explain web and installable PWA modes, offline preparation, requirements, and current release limitations.
+- `index.html` — loads the PWA manifest and offline setup script without remote font dependencies.
+- `vite.config.js` — builds both pages, versions the offline cache, and includes generated bundles in the service worker precache manifest.
+- `src/core/perception/hand-tracker.js`, `src/core/perception/body-tracker.js`, and `src/core/perception/face-tracker.js` — load MediaPipe WASM and models only from local paths.
+- `src/core/perception/perception-engine.js` — reports hand model initialization errors instead of continuing without hand tracking.
+- `README.md` — documents PWA installation and offline preparation.
 - `src/core/perception/face-tracker.js` — corrects mirrored face-yaw direction.
 - `src/core/perception/generic-object-tracker.js` — adjusts object sampling and tracking defaults.
 - `src/core/perception/perception-engine.js` — coordinates object tracker activation and cleanup.

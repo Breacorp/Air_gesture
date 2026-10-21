@@ -16,32 +16,15 @@ export class HandTracker {
   }
 
   /**
-   * Initializes MediaPipe HandLandmarker using local offline assets with fallback
+   * Initializes MediaPipe HandLandmarker using bundled local assets.
    */
   async initialize() {
     try {
-      let vision = null;
-      try {
-        vision = await FilesetResolver.forVisionTasks('/wasm');
-      } catch (e) {
-        console.warn('[HandTracker] Local WASM fileset failed, falling back to CDN:', e);
-        vision = await FilesetResolver.forVisionTasks(
-          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
-        );
-      }
-
-      let modelAssetPath = '/models/hand_landmarker.task';
-      try {
-        const resp = await fetch(modelAssetPath, { method: 'HEAD' });
-        if (!resp.ok) throw new Error('Local task model not accessible');
-      } catch (e) {
-        console.warn('[HandTracker] Local model not found, using Google Storage:', e);
-        modelAssetPath = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
-      }
+      const vision = await FilesetResolver.forVisionTasks('/wasm');
 
       this.handLandmarker = await HandLandmarker.createFromOptions(vision, {
         baseOptions: {
-          modelAssetPath,
+          modelAssetPath: '/models/hand_landmarker.task',
           delegate: 'GPU'
         },
         runningMode: 'VIDEO',
@@ -165,4 +148,3 @@ export class HandTracker {
   }
 }
 }
-

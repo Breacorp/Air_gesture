@@ -9,14 +9,9 @@
     />
     <meta name="theme-color" content="#F8FAFC" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0B0B10" media="(prefers-color-scheme: dark)" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <title>Air Gesture — Moderno Tech</title>
     <link rel="icon" href="../moderno-logo.png" type="image/png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
     <link rel="stylesheet" href="./landing.css" />
   </head>
   <body>
@@ -35,9 +30,10 @@
         <a href="#juegos">Juegos</a>
         <a href="#interaccion-3d">Interacción 3D</a>
         <a href="#tecnologia">Tecnología</a>
+        <a href="#descarga">Modalidades</a>
       </nav>
 
-      <a class="header-cta" href="/">Abrir aplicación <span aria-hidden="true">↗</span></a>
+      <a class="header-cta" href="/">Probar web <span aria-hidden="true">↗</span></a>
     </header>
 
     <main id="contenido">
@@ -50,12 +46,12 @@
             naturales de tus manos frente a la cámara.
           </p>
           <div class="hero-actions">
-            <a class="button button-primary" href="/">Abrir Air Gesture <span aria-hidden="true">↗</span></a>
-            <a class="button button-secondary" href="#control">
+            <a class="button button-primary" href="/">Probar en la web <span aria-hidden="true">↗</span></a>
+            <a class="button button-secondary" href="#descarga">
               <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
                 <path d="m8 5 5 5-5 5" />
               </svg>
-              Ver cómo funciona
+              Instalar y usar offline
             </a>
           </div>
           <ul class="hero-facts" aria-label="Características principales">
@@ -246,30 +242,67 @@
 
       <section class="download-section section-wrap" id="descarga">
         <div class="download-copy">
-          <p class="eyebrow">05 <span>/</span> DESCARGA</p>
-          <h2>Probá Air Gesture en este equipo.</h2>
+          <p class="eyebrow">05 <span>/</span> WEB O INSTALACIÓN LOCAL</p>
+          <h2>Elegí cómo querés usarlo.</h2>
           <p>
-            La aplicación está disponible en este sitio. En este proyecto no hay instaladores ni
-            una versión descargable publicada.
+            Empezá desde el navegador o instalá la webapp en un navegador compatible. Para usarla
+            sin conexión, prepará los recursos locales una vez mientras tenés internet.
           </p>
         </div>
         <div class="download-panel glass-panel">
-          <div class="release-status">
-            <span class="status-indicator" aria-hidden="true"></span>
-            <span>Versión descargable aún no publicada</span>
+          <div class="mode-option">
+            <span class="feature-label">ONLINE · NAVEGADOR</span>
+            <h3>Probala ahora</h3>
+            <p>Sin cuenta. Abrí la aplicación y permití el acceso a la cámara cuando quieras iniciar el seguimiento.</p>
+            <a class="button button-primary mode-button" href="/">Abrir Air Gesture <span aria-hidden="true">↗</span></a>
           </div>
-          <button class="button button-unavailable" type="button" disabled>
-            Descargar Air Gesture
-            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 14v3h12v-3" />
-            </svg>
-          </button>
-          <a class="inline-link" href="/">Abrir la versión web <span aria-hidden="true">↗</span></a>
+          <div class="mode-option mode-option-offline">
+            <span class="feature-label">WEBAPP INSTALABLE · PWA</span>
+            <h3>Instalala en tu equipo</h3>
+            <p>La misma aplicación web se puede instalar desde navegadores compatibles. No hay instaladores nativos publicados para macOS o Windows.</p>
+            <button class="button button-secondary mode-button" id="install-app" type="button">Instalar webapp</button>
+            <p class="install-help" id="install-status" role="status" aria-live="polite">Si tu navegador ofrece instalación, usá la opción «Instalar aplicación» de su menú.</p>
+            <div class="offline-setup">
+              <button class="button button-secondary mode-button" id="prepare-offline" type="button">Preparar uso sin conexión</button>
+              <p class="install-help" id="offline-status" role="status" aria-live="polite">Descarga localmente los modelos y recursos de seguimiento (aprox. 50 MB).</p>
+            </div>
+          </div>
           <p class="download-note">
-            Para iniciar el seguimiento necesitás dar permiso a la cámara en el navegador. La
-            lista de sistemas compatibles y los requisitos de una futura versión instalable todavía
-            no están publicados. El control nativo del escritorio utiliza un puente para macOS.
+            Requisitos: navegador con soporte para cámara, acceso por HTTPS (o localhost) y cámara web. La instalación como PWA depende del navegador. El seguimiento de manos, cuerpo y rostro usa modelos locales. El control global del escritorio requiere además el puente nativo disponible para macOS.
           </p>
+        </div>
+      </section>
+
+      <section class="faq-section section-wrap" id="preguntas">
+        <div class="section-heading">
+          <p class="eyebrow">06 <span>/</span> PREGUNTAS FRECUENTES</p>
+          <h2>Lo esencial, sin letra chica.</h2>
+        </div>
+        <div class="faq-list">
+          <details>
+            <summary>¿Necesito crear una cuenta?</summary>
+            <p>No. Esta versión no incluye cuentas ni inicio de sesión.</p>
+          </details>
+          <details>
+            <summary>¿Puedo usar Air Gesture sin conexión?</summary>
+            <p>Sí, después de cargar la aplicación al menos una vez, instalarla si tu navegador lo permite y completar «Preparar uso sin conexión» con internet. La preparación guarda los archivos de la aplicación y alrededor de 50 MB de modelos y recursos en este navegador. El almacenamiento del navegador puede eliminarse desde sus ajustes.</p>
+          </details>
+          <details>
+            <summary>¿Se envía el video de mi cámara?</summary>
+            <p>El seguimiento utiliza MediaPipe y recursos locales; las imágenes de cámara se procesan en el equipo y no se envían a un servicio de Air Gesture. La cámara solo se solicita cuando iniciás la experiencia.</p>
+          </details>
+          <details>
+            <summary>¿Hay una descarga nativa para macOS o Windows?</summary>
+            <p>Aún no hay instaladores nativos publicados. En navegadores compatibles podés instalar la PWA; es la aplicación web guardada por el navegador, no un paquete nativo independiente.</p>
+          </details>
+          <details>
+            <summary>¿Qué sistema operativo es compatible?</summary>
+            <p>La aplicación web requiere un navegador con cámara, WebGL y soporte para las tecnologías web usadas por MediaPipe. La instalación PWA varía según navegador y sistema operativo; todavía no se publica una matriz de compatibilidad certificada. El puente de control global está disponible para macOS.</p>
+          </details>
+          <details>
+            <summary>¿Qué hace falta para controlar todo el escritorio?</summary>
+            <p>El puntero y las experiencias dentro de Air Gesture funcionan en la aplicación web. Las acciones globales del escritorio requieren el puente nativo de macOS y sus permisos del sistema.</p>
+          </details>
         </div>
       </section>
     </main>
@@ -284,5 +317,6 @@
         <a class="footer-link" href="https://moderno.com.ar/">Volver a Moderno Tech <span aria-hidden="true">↗</span></a>
       </div>
     </footer>
+    <script type="module" src="/src/offline-ui.js"></script>
   </body>
 </html>

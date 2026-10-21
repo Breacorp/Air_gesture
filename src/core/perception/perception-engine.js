@@ -182,8 +182,9 @@ export class PerceptionEngine {
     console.log('[PerceptionEngine] Initializing perception models...');
     try {
       await this.handTracker.initialize();
-    } catch (e) {
-      console.warn('[PerceptionEngine] HandTracker init:', e);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      throw new Error(`No se pudo cargar el modelo local de manos. Comprobá la conexión o prepará los recursos offline y volvé a intentar. ${reason}`);
     }
     try {
       await this.bodyTracker.initialize();

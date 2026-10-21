@@ -97,9 +97,10 @@ http://127.0.0.1:5180/
 
 La landing de Moderno Tech está disponible en `/air-gesture/` y enlaza con la aplicación en `/`.
 El build de Vite incluye ambas páginas, el logotipo oficial de Moderno Tech y una captura real
-de la pantalla de inicio de Air Gesture. No hay un instalador ni una versión descargable publicados
-en este proyecto; la landing lo indica en su sección de descarga. Los enlaces a sus recursos son
-relativos, para facilitar su publicación futura bajo un dominio o subdominio.
+de la pantalla de inicio de Air Gesture. La app se puede instalar como PWA en navegadores
+compatibles; para usarla offline, abrí la landing con conexión y prepará los modelos locales
+(aprox. 50 MB). No hay instaladores nativos publicados. El service worker guarda la app y sus
+archivos generados durante el build; el seguimiento utiliza modelos y WASM locales, sin fallbacks a CDN.
 
 ### Características de la Fase 1
 1. **100% Local y Offline**: Archivos WASM y el modelo `hand_landmarker.task` residen en `public/`, sin dependencias externas.

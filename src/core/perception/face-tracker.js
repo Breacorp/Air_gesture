@@ -21,7 +21,7 @@ export class FaceTracker {
   }
 
   /**
-   * Initializes MediaPipe FaceLandmarker with robust offline/online asset resolution
+   * Initializes MediaPipe FaceLandmarker using bundled local assets.
    */
   async initialize() {
     if (this.isInitialized) return true;
@@ -29,28 +29,11 @@ export class FaceTracker {
 
     this.isInitializing = true;
     try {
-      let vision = null;
-      try {
-        vision = await FilesetResolver.forVisionTasks('/wasm');
-      } catch (e) {
-        console.warn('[FaceTracker] Local WASM fileset failed, falling back to CDN:', e);
-        vision = await FilesetResolver.forVisionTasks(
-          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
-        );
-      }
-
-      let modelAssetPath = '/models/face_landmarker.task';
-      try {
-        const resp = await fetch(modelAssetPath, { method: 'HEAD' });
-        if (!resp.ok) throw new Error('Local task model not accessible');
-      } catch (e) {
-        // Fallback to Google MediaPipe Cloud Storage
-        modelAssetPath = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
-      }
+      const vision = await FilesetResolver.forVisionTasks('/wasm');
 
       this.faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
         baseOptions: {
-          modelAssetPath,
+          modelAssetPath: '/models/face_landmarker.task',
           delegate: 'GPU'
         },
         runningMode: 'VIDEO',

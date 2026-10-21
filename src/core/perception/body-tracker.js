@@ -19,7 +19,7 @@ export class BodyTracker {
   }
 
   /**
-   * Initializes MediaPipe PoseLandmarker using local offline assets with fallback
+   * Initializes MediaPipe PoseLandmarker using bundled local assets.
    */
   async initialize() {
     if (this.isInitialized) return true;
@@ -27,28 +27,11 @@ export class BodyTracker {
 
     this.isInitializing = true;
     try {
-      let vision = null;
-      try {
-        vision = await FilesetResolver.forVisionTasks('/wasm');
-      } catch (e) {
-        console.warn('[BodyTracker] Local WASM fileset failed, falling back to CDN:', e);
-        vision = await FilesetResolver.forVisionTasks(
-          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
-        );
-      }
-
-      let modelAssetPath = '/models/pose_landmarker_lite.task';
-      try {
-        const resp = await fetch(modelAssetPath, { method: 'HEAD' });
-        if (!resp.ok) throw new Error('Local task model not accessible');
-      } catch (e) {
-        console.warn('[BodyTracker] Local model not found, using Google Storage:', e);
-        modelAssetPath = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
-      }
+      const vision = await FilesetResolver.forVisionTasks('/wasm');
 
       this.poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
         baseOptions: {
-          modelAssetPath,
+          modelAssetPath: '/models/pose_landmarker_lite.task',
           delegate: 'GPU'
         },
         runningMode: 'VIDEO',
@@ -183,4 +166,3 @@ export class BodyTracker {
   }
 }
 }
-
