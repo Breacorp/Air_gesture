@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const serviceWorker = await readFile(new URL('../dist/service-worker.js', import.meta.url), 'utf8');
+const vercelConfig = JSON.parse(await readFile(new URL('../vercel.json', import.meta.url), 'utf8'));
 const manifestMatch = serviceWorker.match(/const BUILD_ASSETS = (\{.*\});/);
 
 assert.ok(manifestMatch, 'Build injects the offline asset manifest');
@@ -15,5 +16,12 @@ assert.ok(!landing.some((asset) => asset.endsWith('.html')), 'Duplicate HTML rou
 assert.ok(!serviceWorker.includes("'/app/index.html'"), 'App HTML is cached only when its route is opened');
 assert.ok(serviceWorker.includes("const OFFLINE_CACHE_NAME = 'air-gesture-offline-resources'"), 'Offline resources use a persistent cache');
 assert.ok(serviceWorker.includes('await offlineCache.put(resource, response)'), 'Prepared offline resources survive shell cache updates');
+assert.ok(
+  vercelConfig.headers.some((header) =>
+    header.source === '/assets/(.*)' &&
+    header.headers.some((entry) => entry.key === 'Cache-Control' && entry.value.includes('immutable'))
+  ),
+  'Fingerprint-named assets are cached immutably by Vercel and browsers'
+);
 
-console.log('✅ Landing install precaches only landing assets; app assets remain on demand.');
+console.log('✅ Landing precache is lean, offline resources persist, hashed assets are immutable.');
