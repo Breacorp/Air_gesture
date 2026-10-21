@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
-import { readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 
 const outputDirectory = fileURLToPath(new URL('./dist/', import.meta.url));
 
@@ -12,15 +12,31 @@ function offlinePrecachePlugin() {
     apply: 'build',
     async writeBundle(outputOptions, bundle) {
       const directory = outputOptions.dir || outputDirectory;
+      const appDirectory = resolve(directory, 'app');
+      const appHtmlPath = resolve(directory, 'index.html');
+      const landingHtmlPath = resolve(directory, 'air-gesture/index.html');
+      const appRouteHtmlPath = resolve(appDirectory, 'index.html');
+      const [appHtml, landingHtml] = await Promise.all([
+        readFile(appHtmlPath, 'utf8'),
+        readFile(landingHtmlPath, 'utf8')
+      ]);
+      await mkdir(appDirectory, { recursive: true });
+      await Promise.all([
+        writeFile(appRouteHtmlPath, appHtml),
+        writeFile(appHtmlPath, landingHtml)
+      ]);
+
       const workerPath = resolve(directory, 'service-worker.js');
       const worker = await readFile(workerPath, 'utf8');
       const assets = Object.keys(bundle)
-        .filter((file) => /\.(?:html|js|css|png|svg|webmanifest)$/i.test(file))
+        .filter((file) => file !== 'index.html' && /\.(?:html|js|css|png|svg|webmanifest)$/i.test(file))
         .map((file) => `/${file}`);
+      assets.push('/index.html', '/app/index.html');
       const assetMarker = '"__AIR_GESTURE_BUILD_ASSETS__"';
       const versionMarker = '__AIR_GESTURE_CACHE_VERSION__';
       const fingerprintFiles = [
         'index.html',
+        'app/index.html',
         'air-gesture/index.html',
         'manifest.webmanifest',
         'moderno-logo.png',
@@ -61,7 +77,33 @@ function offlinePrecachePlugin() {
 }
 
 export default defineConfig({
-  plugins: [offlinePrecachePlugin()],
+  plugins: [
+    offlinePrecachePlugin(),
+    {
+      name: 'air-gesture-development-routes',
+      apply: 'serve',
+      configureServer(server) {
+        server.middlewares.use((request, _response, next) => {
+          const url = new URL(request.url, 'http://localhost');
+          if (url.pathname === '/') {
+            request.url = `/air-gesture/${url.search}`;
+          } else if (url.pathname === '/app' || url.pathname === '/app/') {
+            request.url = `/index.html${url.search}`;
+          }
+          next();
+        });
+      },
+      configurePreviewServer(server) {
+        server.middlewares.use((request, _response, next) => {
+          const url = new URL(request.url, 'http://localhost');
+          if (url.pathname === '/app' || url.pathname === '/app/') {
+            request.url = `/app/index.html${url.search}`;
+          }
+          next();
+        });
+      }
+    }
+  ],
   build: {
     rolldownOptions: {
       input: {

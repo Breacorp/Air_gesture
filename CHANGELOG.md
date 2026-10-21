@@ -8,6 +8,7 @@
 - `public/manifest.webmanifest` — install metadata for the Air Gesture web app.
 - `src/offline-ui.js` — PWA install and offline preparation controls.
 - `public/service-worker.js` — app-shell caching and explicit local model preparation.
+- `vercel.json` — routes the product landing to the subdomain root and the application to `/app`.
 - `air-gesture/landing.css` — responsive landing styles with Moderno Tech light and dark themes.
 - `public/moderno-logo.png` — optimized official Moderno Tech logo for the landing.
 - `public/moderno-logo-192.png` and `public/moderno-logo-512.png` — PWA icons using the official Moderno Tech mark.
@@ -15,9 +16,10 @@
 
 ### Changed
 
-- `air-gesture/index.html` and `air-gesture/landing.css` — explain web and installable PWA modes, offline preparation, requirements, and current release limitations.
+- `air-gesture/index.html` and `air-gesture/landing.css` — explain web and installable PWA modes, offline preparation, requirements, current release limitations, and responsive landing layouts.
 - `index.html` — loads the PWA manifest and offline setup script without remote font dependencies.
-- `vite.config.js` — builds both pages, versions the offline cache, and includes generated bundles in the service worker precache manifest.
+- `vite.config.js` — builds the landing at `/` and the app at `/app`, versions the offline cache, and includes generated bundles in the service worker precache manifest.
+- `src/style.css` — adapts the application controls, overlays, dialogs, and telemetry to mobile and tablet viewports.
 - `src/core/perception/hand-tracker.js`, `src/core/perception/body-tracker.js`, and `src/core/perception/face-tracker.js` — load MediaPipe WASM and models only from local paths.
 - `src/core/perception/perception-engine.js` — reports hand model initialization errors instead of continuing without hand tracking.
 - `README.md` — documents PWA installation and offline preparation.

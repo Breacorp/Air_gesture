@@ -2292,3 +2292,562 @@ body.mode-physics .center-stage:hover {
   to { opacity: 1; transform: translate(-50%, 0); }
 }
 
+@media (max-width: 1840px) {
+  html,
+  body {
+    min-width: 320px;
+    min-height: 100%;
+  }
+
+  #app {
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 320px;
+  }
+
+  .top-nav {
+    height: auto;
+    min-height: 60px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "brand telemetry"
+      "actions actions";
+    align-items: center;
+    gap: 10px 14px;
+    padding: 10px 14px;
+    max-height: 42dvh;
+    overflow: hidden;
+  }
+
+  .nav-brand {
+    grid-area: brand;
+    min-width: 0;
+  }
+
+  .brand-text {
+    min-width: 0;
+  }
+
+  .nav-telemetry {
+    grid-area: telemetry;
+    justify-content: flex-end;
+    min-width: 0;
+    gap: 6px;
+  }
+
+  .stat-pill {
+    min-width: 0;
+    padding: 4px 8px;
+  }
+
+  .nav-actions {
+    grid-area: actions;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    min-width: 0;
+    gap: 6px;
+  }
+
+  .nav-actions > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .nav-actions .btn {
+    min-height: 38px;
+    height: auto;
+    padding: 6px 10px;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .nav-actions .btn span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .profile-nav-bar {
+    display: none !important;
+  }
+
+  .perception-debug-panel {
+    right: 20px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    width: min(480px, calc(100vw - 40px));
+    max-height: min(36dvh, 340px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .modal-backdrop {
+    position: fixed;
+    overflow-y: auto;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  }
+
+  .modal-card {
+    width: min(440px, 100%);
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    margin: auto;
+    padding: clamp(20px, 4vw, 32px);
+  }
+
+  .games-lab-modal {
+    overflow-y: auto;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  }
+
+  .games-lab-dialog {
+    width: min(920px, 100%);
+    height: min(640px, 94dvh);
+    min-height: 0;
+    flex: 0 0 auto;
+  }
+
+  .games-lab-header {
+    min-width: 0;
+  }
+
+  .games-tabs {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .btn-game-tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .json-drawer {
+    position: fixed;
+    left: clamp(12px, 24vw, 360px);
+    right: clamp(12px, 24vw, 360px);
+    bottom: max(12px, env(safe-area-inset-bottom));
+    width: auto;
+    max-height: min(240px, 32dvh);
+  }
+
+  .studio-hud,
+  .physics-hud {
+    left: 12px;
+    width: min(340px, calc(100vw - 24px));
+    max-height: calc(100dvh - 156px);
+  }
+
+  .compact-hud {
+    right: max(12px, env(safe-area-inset-right));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    max-width: calc(100vw - 24px);
+    height: auto;
+    min-height: 52px;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    padding: 10px 16px;
+  }
+
+  .failsafe-banner {
+    width: min(560px, calc(100vw - 24px));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+@media (max-width: 760px) {
+  .top-nav {
+    top: max(8px, env(safe-area-inset-top));
+    left: max(8px, env(safe-area-inset-left));
+    right: max(8px, env(safe-area-inset-right));
+    gap: 8px;
+    padding: 9px;
+    border-radius: 12px;
+    max-height: 44dvh;
+  }
+
+  .nav-brand {
+    gap: 8px;
+  }
+
+  .brand-subtitle {
+    font-size: 8px;
+    letter-spacing: .06em;
+  }
+
+  .nav-telemetry {
+    gap: 4px;
+  }
+
+  .stat-pill {
+    flex-direction: column;
+    gap: 1px;
+    padding: 4px 6px;
+    font-size: 10px;
+  }
+
+  .stat-label {
+    font-size: 8px;
+    letter-spacing: .04em;
+  }
+
+  .badge {
+    padding: 3px 6px;
+    font-size: 9px;
+  }
+
+  .nav-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-height: 25dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 1px 2px 3px 1px;
+    scrollbar-width: thin;
+  }
+
+  .nav-actions .btn {
+    width: 100%;
+    min-height: 38px;
+    gap: 4px;
+    padding: 5px 4px;
+    font-size: clamp(9px, 2.7vw, 11px);
+    line-height: 1.2;
+  }
+
+  .nav-actions .btn svg {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+  }
+
+  .nav-actions .system-status-pill {
+    justify-content: center;
+    min-height: 38px;
+    gap: 4px;
+    padding: 4px;
+    font-size: 8px;
+    letter-spacing: 0;
+    text-align: center;
+  }
+
+  .perception-debug-panel {
+    left: 8px;
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    width: auto;
+    max-width: none;
+    max-height: calc(56dvh - env(safe-area-inset-bottom));
+  }
+
+  .perception-debug-card {
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .debug-card-header {
+    gap: 7px;
+    margin-bottom: 9px;
+    padding-bottom: 8px;
+  }
+
+  .debug-title {
+    font-size: clamp(9px, 2.8vw, 12px);
+    letter-spacing: .03em;
+    overflow-wrap: anywhere;
+  }
+
+  .debug-status-tag {
+    flex: 0 0 auto;
+    font-size: 9px;
+  }
+
+  .debug-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .debug-section {
+    min-width: 0;
+    padding: 7px 8px;
+  }
+
+  .debug-value-row,
+  .debug-sub-row {
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 3px 8px;
+    font-size: 10px;
+  }
+
+  .debug-sub-label,
+  .debug-section .font-mono {
+    font-size: 9px;
+    overflow-wrap: anywhere;
+  }
+
+  .json-drawer {
+    left: 8px;
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    max-height: 34dvh;
+  }
+
+  .drawer-header {
+    gap: 8px;
+    padding-inline: 10px;
+  }
+
+  .drawer-title {
+    min-width: 0;
+    font-size: 9px;
+  }
+
+  .drawer-actions {
+    flex: 0 0 auto;
+  }
+
+  .studio-hud,
+  .physics-hud {
+    top: min(46dvh, 330px);
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    left: 8px;
+    width: auto;
+    max-height: none;
+    padding: 12px;
+    gap: 11px;
+  }
+
+  .studio-model-selector {
+    flex-wrap: wrap;
+  }
+
+  .btn-studio-preset {
+    min-width: 90px;
+    flex: 1 1 28%;
+    white-space: normal;
+  }
+
+  .compact-hud {
+    left: 8px;
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    max-width: none;
+    justify-content: flex-start;
+    border-radius: 16px;
+  }
+
+  .compact-hud-left,
+  .compact-hud-right {
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .compact-hint {
+    overflow-wrap: anywhere;
+  }
+
+  .games-lab-modal {
+    align-items: stretch;
+    padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom));
+  }
+
+  .games-lab-dialog {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border-radius: 12px;
+  }
+
+  .games-lab-header {
+    gap: 8px;
+    padding: 9px 10px;
+  }
+
+  .games-lab-title-wrap {
+    min-width: 0;
+    flex: 1 1 120px;
+  }
+
+  .games-tabs {
+    flex: 1 1 100%;
+    order: 3;
+  }
+
+  .games-header-actions {
+    flex: 0 0 auto;
+  }
+
+  .games-lab-footer {
+    padding: 8px;
+  }
+
+  .games-guide-pill {
+    max-width: 100%;
+    text-align: center;
+    font-size: 10px;
+    line-height: 1.5;
+  }
+
+  .center-stage {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    max-height: 42dvh;
+    margin: 0;
+    overflow-x: hidden;
+  }
+
+  .diag-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .diag-label {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .diag-controls-row,
+  .filter-sliders-row {
+    flex-wrap: wrap;
+  }
+
+  .diag-controls-row > *,
+  .filter-sliders-row > * {
+    min-width: 0;
+  }
+
+  .center-interactive-dock,
+  .center-diagnostics-card {
+    padding: 10px;
+  }
+}
+
+@media (max-width: 350px) {
+  .brand-subtitle,
+  .stat-label {
+    display: none;
+  }
+
+  .nav-telemetry {
+    gap: 3px;
+  }
+
+  .stat-pill {
+    flex-direction: row;
+    padding: 4px 5px;
+  }
+
+  .nav-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .perception-debug-panel {
+    max-height: calc(54dvh - env(safe-area-inset-bottom));
+  }
+
+  .debug-grid {
+    gap: 5px;
+  }
+
+  .debug-section {
+    padding: 6px;
+  }
+
+  .metric-title-row,
+  .metric-sub {
+    flex-wrap: wrap;
+    gap: 3px 8px;
+  }
+
+  .finger-row {
+    gap: 5px;
+  }
+
+  .finger-name {
+    width: 44px;
+  }
+
+  .studio-telemetry-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .games-title {
+    font-size: 13px;
+  }
+}
+
+@media (max-height: 540px) and (orientation: landscape) {
+  .top-nav {
+    max-height: 60dvh;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "brand telemetry"
+      "actions actions";
+    gap: 6px 10px;
+    padding: 6px 10px;
+  }
+
+  .nav-actions {
+    display: flex;
+    flex-wrap: nowrap;
+    max-height: 40dvh;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .nav-actions .btn {
+    width: auto;
+    flex: 0 0 auto;
+    min-height: 34px;
+    padding-inline: 8px;
+    font-size: 10px;
+  }
+
+  .perception-debug-panel {
+    max-height: 34dvh;
+  }
+
+  .perception-debug-card {
+    padding: 7px 9px;
+  }
+
+  .debug-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .debug-section {
+    padding: 5px 6px;
+  }
+
+  .debug-card-header {
+    margin-bottom: 5px;
+    padding-bottom: 5px;
+  }
+
+  .studio-hud,
+  .physics-hud {
+    top: min(62dvh, 260px);
+  }
+
+  .games-lab-dialog {
+    height: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

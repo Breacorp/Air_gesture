@@ -4,6 +4,8 @@ const PRECACHE_ASSETS = Array.isArray(BUILD_ASSETS) ? BUILD_ASSETS : [];
 const APP_SHELL = [
   '/',
   '/index.html',
+  '/app/',
+  '/app/index.html',
   '/air-gesture/',
   '/air-gesture/index.html',
   '/manifest.webmanifest',
@@ -58,7 +60,9 @@ self.addEventListener('fetch', (event) => {
       } catch {
         const pathname = url.pathname.startsWith('/air-gesture')
           ? '/air-gesture/index.html'
-          : '/index.html';
+          : url.pathname.startsWith('/app')
+            ? '/app/index.html'
+            : '/index.html';
         return (await caches.match(request)) || (await caches.match(pathname)) ||
           new Response('Air Gesture no está disponible sin conexión. Abrí la aplicación online y prepará los recursos offline primero.', {
             status: 503,
