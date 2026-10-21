@@ -98,6 +98,9 @@ http://127.0.0.1:5180/
 La landing de Moderno Tech está disponible en la raíz del sitio; la aplicación está en `/app/`.
 En el subdominio de producción esas rutas corresponden a `air-gesture.moderno.com.ar/` y
 `air-gesture.moderno.com.ar/app`.
+En iPhone, la cámara requiere abrir la app desde HTTPS y permitir el acceso a la cámara en Safari.
+Las direcciones HTTP con una IP local no son un origen seguro para la cámara; para probar desde
+otro dispositivo, usá el subdominio HTTPS publicado.
 El build de Vite incluye ambas páginas, el logotipo oficial de Moderno Tech y una captura real
 de la pantalla de inicio de Air Gesture. La app se puede instalar como PWA en navegadores
 compatibles; para usarla offline, abrí la landing con conexión y prepará los modelos locales

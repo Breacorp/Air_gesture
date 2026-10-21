@@ -254,7 +254,13 @@ export class PerceptionEngine {
     });
 
     // Wait until camera video is playing and has positive dimensions
-    await this._waitForVideoReady(videoElement);
+    const videoReady = await this._waitForVideoReady(videoElement);
+    if (!videoReady) {
+      this.cameraManager.stopCamera(source.id);
+      this.state = 'OFF';
+      throw new Error('La cámara se autorizó, pero el video no entregó imágenes. Cerrá otras apps que la usen y volvé a intentar.');
+    }
+
     this.state = 'CAMERA_READY';
 
     this._loopRunning = true;

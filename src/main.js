@@ -477,6 +477,9 @@ btnStartCamera.addEventListener('click', async () => {
   try {
     btnStartCamera.style.display = 'none';
     initLoader.classList.remove('hidden');
+    initStatusText.textContent = 'Verificando acceso a la cámara...';
+    tracker.cameraManager.assertSupported();
+
     initStatusText.textContent = 'Inicializando modelos (Manos, Cara, Cuerpo, Objetos)...';
 
     await tracker.initialize();
@@ -1096,4 +1099,3 @@ if (gamesTabGroup) {
     }
   });
 }
-

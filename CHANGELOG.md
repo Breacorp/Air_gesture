@@ -17,6 +17,11 @@
 
 ### Changed
 
+- `src/core/perception/camera-manager.js` — checks camera support before model initialization and reports secure-context and permission failures instead of returning an empty active camera.
+- `src/core/perception/perception-engine.js` — stops the camera and reports an error when Safari provides no playable video frames.
+- `src/main.js` — checks browser camera access before downloading or initializing perception models.
+- `test/test-camera-manager.js` — covers insecure origins, camera permission failures, and Safari inline playback settings.
+- `README.md` — documents the HTTPS requirement for camera access on iPhone and other LAN devices.
 - `air-gesture/index.html` — adds a theme control and applies the saved or system theme before rendering.
 - `air-gesture/landing.css` — supports explicit light and dark themes and keeps the theme control responsive.
 - `air-gesture/index.html` and `air-gesture/landing.css` — explain web and installable PWA modes, offline preparation, requirements, current release limitations, and responsive landing layouts.

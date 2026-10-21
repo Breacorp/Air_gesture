@@ -9,6 +9,21 @@
 
 import { CameraSource } from './camera-source.js';
 
+function getCameraErrorMessage(error) {
+  switch (error?.name) {
+    case 'NotAllowedError':
+    case 'SecurityError':
+      return 'No se permitió el acceso a la cámara. Revisá los permisos de cámara de Safari para este sitio.';
+    case 'NotFoundError':
+      return 'No se encontró una cámara disponible en este dispositivo.';
+    case 'NotReadableError':
+    case 'TrackStartError':
+      return 'La cámara no está disponible. Cerrá otras apps que la estén usando e intentá de nuevo.';
+    default:
+      return `No se pudo iniciar la cámara. ${error?.message || error || ''}`.trim();
+  }
+}
+
 export class CameraManager {
   constructor() {
     this.sources = new Map(); // id -> CameraSource
@@ -19,7 +34,18 @@ export class CameraManager {
     };
 
     this.onDevicesChangedCallback = null;
-    this.isSupported = typeof navigator !== 'undefined' && !!navigator.mediaDevices;
+    this.isSupported = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
+  }
+
+  assertSupported() {
+    if (this.isSupported) return;
+
+    const isInsecureContext = typeof window !== 'undefined' && !window.isSecureContext;
+    throw new Error(
+      isInsecureContext
+        ? 'El navegador solo permite usar la cámara en una conexión segura. Abrí Air Gesture desde su dirección HTTPS; una IP local con HTTP no puede acceder a la cámara.'
+        : 'Este navegador no ofrece acceso a la cámara. Abrí Air Gesture en una versión actual de Safari.'
+    );
   }
 
   /**
@@ -91,45 +117,42 @@ export class CameraManager {
       audio: false
     };
 
-    let stream = null;
-    if (this.isSupported && navigator.mediaDevices.getUserMedia) {
+    this.assertSupported();
+
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (error) {
+      if (error?.name !== 'OverconstrainedError' && error?.name !== 'ConstraintNotSatisfiedError') {
+        throw new Error(getCameraErrorMessage(error), { cause: error });
+      }
+
+      console.warn(`[CameraManager] Camera constraints unsupported for ${role}, retrying with defaults:`, error);
       try {
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
-      } catch (err) {
-        // Fallback without deviceId / facingMode constraints if initial request fails
-        console.warn(`[CameraManager] Specialized constraint failed for ${role}, retrying generic:`, err);
         stream = await navigator.mediaDevices.getUserMedia({
           video: { width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: false
         });
+      } catch (fallbackError) {
+        throw new Error(getCameraErrorMessage(fallbackError), { cause: fallbackError });
       }
     }
 
     const videoEl = options.videoElement;
-    if (videoEl && stream) {
+    if (videoEl) {
+      videoEl.muted = true;
+      videoEl.playsInline = true;
       videoEl.srcObject = stream;
-      await new Promise((resolve) => {
-        const onReady = () => {
-          videoEl.removeEventListener('loadedmetadata', onReady);
-          videoEl.removeEventListener('loadeddata', onReady);
-          videoEl.removeEventListener('canplay', onReady);
-          videoEl.play().catch(e => console.warn('[CameraManager] play() error:', e)).finally(() => resolve());
-        };
-
-        if (videoEl.readyState >= 2 && videoEl.videoWidth > 0) {
-          videoEl.play().catch(() => {}).finally(() => resolve());
-          return;
-        }
-
-        videoEl.addEventListener('loadedmetadata', onReady, { once: true });
-        videoEl.addEventListener('loadeddata', onReady, { once: true });
-        videoEl.addEventListener('canplay', onReady, { once: true });
-
-        // Safety fallback timeout
-        setTimeout(() => {
-          onReady();
-        }, 3000);
-      });
+      try {
+        await videoEl.play();
+      } catch (error) {
+        stream.getTracks().forEach(track => track.stop());
+        videoEl.srcObject = null;
+        throw new Error(
+          `La cámara fue autorizada, pero Safari no pudo iniciar el video. ${getCameraErrorMessage(error)}`,
+          { cause: error }
+        );
+      }
     }
 
     const source = new CameraSource({
