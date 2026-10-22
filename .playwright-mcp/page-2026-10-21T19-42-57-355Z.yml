@@ -1,0 +1,116 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - link "Air Gesture, inicio" [ref=e4] [cursor=pointer]:
+      - /url: "#inicio"
+      - generic [ref=e9]:
+        - text: AIR
+        - generic [ref=e10]: GESTURE
+    - navigation "Navegación principal" [ref=e11]:
+      - link "Experiencias" [ref=e12] [cursor=pointer]:
+        - /url: "#experiencias"
+      - link "Cómo funciona" [ref=e13] [cursor=pointer]:
+        - /url: "#como-funciona"
+      - link "Privacidad" [ref=e14] [cursor=pointer]:
+        - /url: "#privacidad"
+    - link "Abrir la aplicación Air Gesture" [ref=e15] [cursor=pointer]:
+      - /url: /
+      - text: Abrir la app
+      - generic [aria-hidden] [ref=e16]: ↗
+  - main [ref=e17]:
+    - generic [ref=e18]:
+      - generic [ref=e19]:
+        - paragraph [ref=e20]: Una nueva forma de interactuar
+        - heading "Tus manos. Tu nueva interfaz." [level=1] [ref=e22]: Tus manos.Tu nueva interfaz.
+        - paragraph [ref=e23]: Jugá, explorá el espacio 3D y controlá tu computadora con gestos naturales. Sin tocar la pantalla. Sin perder el control.
+        - generic [ref=e24]:
+          - link "Probá Air Gesture" [ref=e25] [cursor=pointer]:
+            - /url: /
+            - text: Probá Air Gesture
+            - generic [aria-hidden] [ref=e26]: ↗
+          - link "Conocé lo que podés hacer" [ref=e27] [cursor=pointer]:
+            - /url: "#experiencias"
+            - text: Conocé lo que podés hacer
+            - generic [aria-hidden] [ref=e28]: ↓
+        - generic [ref=e29]:
+          - generic [ref=e30]: ✳ Seguimiento en tiempo real
+          - generic [ref=e31]: ◉ Procesamiento local
+      - generic "Ilustración del seguimiento gestual de una mano" [ref=e32]:
+        - generic [ref=e36]:
+          - generic [aria-hidden] [ref=e37]: ✳
+          - generic [ref=e38]: INTERACCIÓN ESPACIAL
+        - generic [ref=e57]: GESTOS QUE SE SIENTEN NATURALES
+        - generic [ref=e60]: Ilustración del seguimiento gestual
+      - generic [aria-hidden] [ref=e61]: 01 — 03
+    - generic [ref=e62]:
+      - generic [ref=e63]:
+        - paragraph [ref=e64]: MÁS QUE MOVER UN CURSOR
+        - heading "Una misma idea. Tres formas de vivirla." [level=2] [ref=e65]: Una misma idea.Tres formas de vivirla.
+        - paragraph [ref=e66]: Air Gesture conecta tus movimientos con experiencias que ya conocés y otras por descubrir.
+      - generic [ref=e67]:
+        - article [ref=e68]:
+          - generic [ref=e69]:
+            - generic [ref=e70]: 01 / JUGAR
+            - generic [aria-hidden] [ref=e71]: ↗
+          - generic [ref=e77]: ✳
+          - heading "Jugá con el movimiento" [level=3] [ref=e78]
+          - paragraph [ref=e79]: Reaccioná, apuntá y esquivá. Tus gestos se convierten en una forma nueva de jugar.
+        - article [ref=e80]:
+          - generic [ref=e81]:
+            - generic [ref=e82]: 02 / EXPLORAR
+            - generic [aria-hidden] [ref=e83]: ↗
+          - generic [aria-hidden] [ref=e84]:
+            - generic [ref=e90]: X
+            - generic [ref=e91]: "Y"
+            - generic [ref=e92]: Z
+          - heading "Manipulá en 3D" [level=3] [ref=e94]
+          - paragraph [ref=e95]: Acercate a los objetos virtuales y explorá el espacio con tus manos.
+        - article [ref=e96]:
+          - generic [ref=e97]:
+            - generic [ref=e98]: 03 / CONTROLAR
+            - generic [aria-hidden] [ref=e99]: ↗
+          - heading "Interactuá con tu compu" [level=3] [ref=e114]
+          - paragraph [ref=e115]: Navegá y activá acciones con gestos, desde una experiencia manos libres.
+    - generic [ref=e116]:
+      - generic [ref=e117]:
+        - paragraph [ref=e118]: TECNOLOGÍA QUE DESAPARECE
+        - heading "Vos hacés el gesto. Air Gesture entiende." [level=2] [ref=e119]: Vos hacés el gesto.Air Gesture entiende.
+        - paragraph [ref=e120]: La cámara detecta tus manos y el sistema interpreta el movimiento para convertirlo en una acción. Sin controles extra. Sin interrumpir el momento.
+        - link "Abrir la aplicación" [ref=e121] [cursor=pointer]:
+          - /url: /
+          - text: Abrir la aplicación
+          - generic [aria-hidden] [ref=e122]: ↗
+      - generic "Cómo funciona Air Gesture" [ref=e123]:
+        - generic [ref=e124]:
+          - generic [ref=e125]: "01"
+          - generic [ref=e126]:
+            - heading "Mostrá tus manos" [level=3] [ref=e127]
+            - paragraph [ref=e128]: La cámara captura los movimientos para iniciar la experiencia.
+          - generic [aria-hidden] [ref=e129]: ⌾
+        - generic [ref=e130]:
+          - generic [ref=e131]: "02"
+          - generic [ref=e132]:
+            - heading "Movete con naturalidad" [level=3] [ref=e133]
+            - paragraph [ref=e134]: El seguimiento reconoce la posición y los gestos de tus manos.
+          - generic [aria-hidden] [ref=e135]: ✳
+        - generic [ref=e136]:
+          - generic [ref=e137]: "03"
+          - generic [ref=e138]:
+            - heading "La acción sucede" [level=3] [ref=e139]
+            - paragraph [ref=e140]: Jugá, explorá objetos 3D o interactuá con tu computadora.
+          - generic [aria-hidden] [ref=e141]: ↗
+    - generic [ref=e142]:
+      - generic [ref=e147]:
+        - paragraph [ref=e148]: TU ESPACIO, TU CONTROL
+        - heading "La interacción ocurre en tu equipo." [level=2] [ref=e149]
+        - paragraph [ref=e150]: El seguimiento de manos se procesa localmente. La cámara es parte de la experiencia, y vos decidís cuándo empezar.
+      - link "Conocer Air Gesture" [ref=e151] [cursor=pointer]:
+        - /url: /
+        - text: Conocer Air Gesture
+        - generic [aria-hidden] [ref=e152]: ↗
+  - contentinfo [ref=e153]:
+    - link "AIRGESTURE" [ref=e154] [cursor=pointer]:
+      - /url: "#inicio"
+    - paragraph [ref=e155]: Una nueva forma de interactuar.
+    - generic [ref=e156]:
+      - text: Un producto de
+      - strong [ref=e157]: Moderno Tech

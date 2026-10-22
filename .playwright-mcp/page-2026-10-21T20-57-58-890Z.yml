@@ -1,0 +1,207 @@
+- generic [active] [ref=f8e1]:
+  - link "Ir al contenido" [ref=f8e2] [cursor=pointer]:
+    - /url: "#contenido"
+  - banner [ref=f8e3]:
+    - link "Moderno Tech, sitio principal" [ref=f8e4] [cursor=pointer]:
+      - /url: https://moderno.com.ar/
+      - generic [ref=f8e5]: Moderno Tech
+    - link "Air Gesture" [ref=f8e7] [cursor=pointer]:
+      - /url: "#inicio"
+    - navigation "Navegación principal" [ref=f8e8]:
+      - link "Control por gestos" [ref=f8e9] [cursor=pointer]:
+        - /url: "#control"
+      - link "Juegos" [ref=f8e10] [cursor=pointer]:
+        - /url: "#juegos"
+      - link "Interacción 3D" [ref=f8e11] [cursor=pointer]:
+        - /url: "#interaccion-3d"
+      - link "Tecnología" [ref=f8e12] [cursor=pointer]:
+        - /url: "#tecnologia"
+      - link "Modalidades" [ref=f8e13] [cursor=pointer]:
+        - /url: "#descarga"
+    - generic [ref=f8e14]:
+      - button "Cambiar a modo claro" [ref=f8e15] [cursor=pointer]:
+        - generic [ref=f8e18]: Modo oscuro
+      - link "Probar web" [ref=f8e19] [cursor=pointer]:
+        - /url: /app/
+        - text: Probar web
+        - generic [aria-hidden] [ref=f8e20]: ↗
+  - main [ref=f8e21]:
+    - generic [ref=f8e22]:
+      - generic [ref=f8e23]:
+        - paragraph [ref=f8e24]: CONTROL GESTUAL · INTERACCIÓN ESPACIAL
+        - heading "Tus manos. Tu nueva interfaz." [level=1] [ref=f8e26]: Tus manos.Tu nueva interfaz.
+        - paragraph [ref=f8e27]: Controlá tu computadora, explorá juegos y manipulá modelos 3D con movimientos naturales de tus manos frente a la cámara.
+        - generic [ref=f8e28]:
+          - link "Probar en la web" [ref=f8e29] [cursor=pointer]:
+            - /url: /app/
+            - text: Probar en la web
+            - generic [aria-hidden] [ref=f8e30]: ↗
+          - link "Instalar y usar offline" [ref=f8e31] [cursor=pointer]:
+            - /url: "#descarga"
+        - list "Características principales" [ref=f8e34]:
+          - listitem [ref=f8e35]: Seguimiento de manos en tiempo real
+          - listitem [ref=f8e38]: Procesamiento local
+      - figure "La cámara se activa cuando elegís comenzar." [ref=f8e42]:
+        - generic [ref=f8e43]:
+          - generic [ref=f8e48]: AIR GESTURE / APLICACIÓN
+          - generic [ref=f8e49]: CAPTURA REAL
+        - img "Pantalla real de inicio de Air Gesture, con el botón para permitir la cámara y comenzar." [ref=f8e51]
+        - generic [ref=f8e54]: Pantalla de inicio de la aplicación · captura real
+      - generic [aria-hidden] [ref=f8e55]: MODERNO TECH / AIR GESTURE
+    - region "Descripción del producto" [ref=f8e56]:
+      - generic [ref=f8e57]:
+        - generic [ref=f8e58]: UNA NUEVA FORMA DE INTERACTUAR
+        - paragraph [ref=f8e59]: Movimientos naturales. Acciones precisas. Todo desde tu computadora.
+    - generic [ref=f8e60]:
+      - generic [ref=f8e61]:
+        - paragraph [ref=f8e62]: 01 / CONTROL POR GESTOS
+        - heading "Interactuá sin tocar la pantalla." [level=2] [ref=f8e63]
+        - paragraph [ref=f8e64]: El perfil Air Touch convierte gestos reconocidos en acciones concretas de puntero.
+      - generic [ref=f8e65]:
+        - generic [ref=f8e66]:
+          - paragraph [ref=f8e70]: AIR TOUCH
+          - heading "Tu mano funciona como un trackpad." [level=3] [ref=f8e71]
+          - paragraph [ref=f8e72]: Apuntá con el índice y usá un gesto de pinza para seleccionar o arrastrar.
+          - link "Probar la aplicación" [ref=f8e73] [cursor=pointer]:
+            - /url: /app/
+            - text: Probar la aplicación
+            - generic [aria-hidden] [ref=f8e74]: ↗
+        - generic [ref=f8e75]:
+          - article [ref=f8e76]:
+            - generic [ref=f8e77]: "01"
+            - generic [ref=f8e78]:
+              - heading "Mover el puntero" [level=3] [ref=f8e79]
+              - paragraph [ref=f8e80]: Seguimiento continuo con modo relativo o absoluto.
+            - generic "Índice" [ref=f8e81]: "01"
+          - article [ref=f8e82]:
+            - generic [ref=f8e83]: "02"
+            - generic [ref=f8e84]:
+              - heading "Seleccionar y arrastrar" [level=3] [ref=f8e85]
+              - paragraph [ref=f8e86]: Pinza entre pulgar e índice para hacer clic; mantenela para arrastrar.
+            - generic "Pulgar e índice" [ref=f8e87]: "02"
+          - article [ref=f8e88]:
+            - generic [ref=f8e89]: "03"
+            - generic [ref=f8e90]:
+              - heading "Desplazarte y acercar" [level=3] [ref=f8e91]
+              - paragraph [ref=f8e92]: Gestos de desplazamiento y zoom del escritorio con el puente nativo de macOS.
+            - generic "Dos manos" [ref=f8e93]: "03"
+          - paragraph [ref=f8e94]: Las acciones sobre el escritorio y los atajos del sistema requieren el puente nativo de macOS; el control del puntero también está disponible dentro de la aplicación.
+    - generic [ref=f8e96]:
+      - generic [ref=f8e97]:
+        - paragraph [ref=f8e98]: 02 / JUEGOS INTERACTIVOS
+        - heading "Jugá con tus movimientos." [level=2] [ref=f8e99]
+        - paragraph [ref=f8e100]: Air Games Lab incluye experiencias que se controlan con el seguimiento de manos.
+      - generic [ref=f8e101]:
+        - generic [ref=f8e102]:
+          - generic [ref=f8e103]: AIR GAMES LAB
+          - heading "Un gesto puede ser el control." [level=3] [ref=f8e104]
+          - paragraph [ref=f8e105]: Probá Fruit Ninja, Air Pong y Basketball desde el módulo de juegos de Air Gesture.
+          - link "Abrir Air Games" [ref=f8e106] [cursor=pointer]:
+            - /url: /app/
+            - text: Abrir Air Games
+            - generic [aria-hidden] [ref=f8e107]: ↗
+        - generic "Juegos disponibles" [ref=f8e108]:
+          - generic [ref=f8e109]:
+            - generic [ref=f8e110]: "01"
+            - generic [ref=f8e111]: Fruit Ninja
+            - generic [aria-hidden] [ref=f8e112]: ↗
+          - generic [ref=f8e113]:
+            - generic [ref=f8e114]: "02"
+            - generic [ref=f8e115]: Air Pong
+            - generic [aria-hidden] [ref=f8e116]: ↗
+          - generic [ref=f8e117]:
+            - generic [ref=f8e118]: "03"
+            - generic [ref=f8e119]: Basketball
+            - generic [aria-hidden] [ref=f8e120]: ↗
+    - generic [ref=f8e121]:
+      - generic [ref=f8e122]:
+        - paragraph [ref=f8e123]: 03 / INTERACCIÓN 3D
+        - heading "Explorá modelos con tus manos." [level=2] [ref=f8e124]
+        - paragraph [ref=f8e125]: Air 3D Studio permite explorar modelos de muestra y cargar archivos 3D compatibles.
+      - generic [ref=f8e126]:
+        - article [ref=f8e127]:
+          - generic [ref=f8e128]: A
+          - heading "Cargá tu modelo" [level=3] [ref=f8e129]
+          - paragraph [ref=f8e130]:
+            - text: Air 3D Studio admite archivos
+            - strong [ref=f8e131]: .STL
+            - text: "y"
+            - strong [ref=f8e132]: .OBJ
+            - text: ", además de modelos de muestra integrados."
+        - article [ref=f8e133]:
+          - generic [ref=f8e134]: B
+          - heading "Manipulalo en el espacio" [level=3] [ref=f8e135]
+          - paragraph [ref=f8e136]: Usá gestos para tomar y mover el modelo; dos manos permiten cambiar su escala y rotación.
+        - article [ref=f8e137]:
+          - generic [ref=f8e138]: C
+          - heading "Explorá sus detalles" [level=3] [ref=f8e139]
+          - paragraph [ref=f8e140]: Visualizá las formas y proporciones del modelo en el escenario tridimensional de la aplicación.
+    - generic [ref=f8e142]:
+      - generic [ref=f8e143]:
+        - paragraph [ref=f8e144]: 04 / TECNOLOGÍA
+        - heading "El seguimiento sucede en tu equipo." [level=2] [ref=f8e145]
+        - paragraph [ref=f8e146]: Air Gesture utiliza la cámara y los modelos locales de MediaPipe para detectar puntos de referencia de las manos. El procesamiento de imagen se realiza localmente.
+      - generic [ref=f8e147]:
+        - generic [ref=f8e148]:
+          - generic [ref=f8e149]: "21"
+          - generic [ref=f8e150]:
+            - strong [ref=f8e151]: Puntos de referencia
+            - generic [ref=f8e152]: por mano detectada
+        - generic [ref=f8e158]:
+          - strong [ref=f8e159]: Modelos locales
+          - generic [ref=f8e160]: MediaPipe y archivos WASM en el proyecto
+        - generic [ref=f8e166]:
+          - strong [ref=f8e167]: Sin enviar imágenes a la nube
+          - generic [ref=f8e168]: La cámara se inicia con tu permiso
+    - generic [ref=f8e169]:
+      - generic [ref=f8e170]:
+        - paragraph [ref=f8e171]: 05 / WEB O INSTALACIÓN LOCAL
+        - heading "Elegí cómo querés usarlo." [level=2] [ref=f8e172]
+        - paragraph [ref=f8e173]: Empezá desde el navegador o instalá la webapp en un navegador compatible. Para usarla sin conexión, prepará los recursos locales una vez mientras tenés internet. El procesamiento ocurre en tu equipo; una vez preparada, no necesita solicitudes a Vercel para funcionar offline.
+      - generic [ref=f8e174]:
+        - generic [ref=f8e175]:
+          - generic [ref=f8e176]: ONLINE · NAVEGADOR
+          - heading "Probala ahora" [level=3] [ref=f8e177]
+          - paragraph [ref=f8e178]: Sin cuenta. Abrí la aplicación y permití el acceso a la cámara cuando quieras iniciar el seguimiento.
+          - link "Abrir Air Gesture" [ref=f8e179] [cursor=pointer]:
+            - /url: /app/
+            - text: Abrir Air Gesture
+            - generic [aria-hidden] [ref=f8e180]: ↗
+        - generic [ref=f8e181]:
+          - generic [ref=f8e182]: WEBAPP INSTALABLE · PWA
+          - heading "Instalala en tu equipo" [level=3] [ref=f8e183]
+          - paragraph [ref=f8e184]: La misma aplicación web se puede instalar desde navegadores compatibles. No hay instaladores nativos publicados para macOS o Windows.
+          - button "Instalar webapp" [ref=f8e185] [cursor=pointer]
+          - status [ref=f8e186]: Si tu navegador ofrece instalación, usá la opción «Instalar aplicación» de su menú.
+          - generic [ref=f8e187]:
+            - button "Preparar uso sin conexión" [disabled] [ref=f8e188]
+            - status [ref=f8e189]: Este navegador no admite preparación offline mediante PWA.
+        - paragraph [ref=f8e190]: "Requisitos: navegador con soporte para cámara, acceso por HTTPS (o localhost) y cámara web. La instalación como PWA depende del navegador. El seguimiento de manos, cuerpo y rostro usa modelos locales. El control global del escritorio requiere además el puente nativo disponible para macOS."
+    - generic [ref=f8e191]:
+      - generic [ref=f8e192]:
+        - paragraph [ref=f8e193]: 06 / PREGUNTAS FRECUENTES
+        - heading "Lo esencial, sin letra chica." [level=2] [ref=f8e194]
+      - generic [ref=f8e195]:
+        - group [ref=f8e196]:
+          - generic "¿Necesito crear una cuenta? +" [ref=f8e197] [cursor=pointer]
+        - group [ref=f8e198]:
+          - generic "¿Puedo usar Air Gesture sin conexión? +" [ref=f8e199] [cursor=pointer]
+        - group [ref=f8e200]:
+          - generic "¿Se envía el video de mi cámara? +" [ref=f8e201] [cursor=pointer]
+        - group [ref=f8e202]:
+          - generic "¿Hay una descarga nativa para macOS o Windows? +" [ref=f8e203] [cursor=pointer]
+        - group [ref=f8e204]:
+          - generic "¿Qué sistema operativo es compatible? +" [ref=f8e205] [cursor=pointer]
+        - group [ref=f8e206]:
+          - generic "¿Qué hace falta para controlar todo el escritorio? +" [ref=f8e207] [cursor=pointer]
+  - contentinfo [ref=f8e208]:
+    - generic [ref=f8e209]:
+      - link "Volver a Moderno Tech" [ref=f8e210] [cursor=pointer]:
+        - /url: https://moderno.com.ar/
+        - generic [ref=f8e211]:
+          - text: Desarrollado por
+          - strong [ref=f8e212]: Moderno Tech
+      - generic [ref=f8e213]: Air Gesture · Control gestual e interacción espacial
+      - link "Volver a Moderno Tech" [ref=f8e214] [cursor=pointer]:
+        - /url: https://moderno.com.ar/
+        - text: Volver a Moderno Tech ↗

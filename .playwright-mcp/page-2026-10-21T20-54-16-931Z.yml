@@ -1,0 +1,95 @@
+- generic [ref=f3e2]:
+  - banner [ref=f3e4]:
+    - generic [ref=f3e9]:
+      - generic [ref=f3e10]: Air Gesture
+      - generic [ref=f3e11]: Control Center • macOS Background Engine
+    - generic [ref=f3e12]:
+      - generic [ref=f3e13]:
+        - generic [ref=f3e14]: ENGINE
+        - generic [ref=f3e15]: 0 FPS
+      - generic [ref=f3e16]:
+        - generic [ref=f3e17]: LATENCIA
+        - generic [ref=f3e18]: 0 ms
+      - generic [ref=f3e19]:
+        - generic [ref=f3e20]: TRACKER
+        - generic [ref=f3e21]: 0 Manos
+    - generic [ref=f3e22]:
+      - button "Modo AR" [ref=f3e23] [cursor=pointer]
+      - button "📐 Full Sensor View" [ref=f3e28] [cursor=pointer]:
+        - generic [ref=f3e29]: 📐
+        - generic [ref=f3e30]: Full Sensor View
+      - button "Calibrar Z" [ref=f3e31] [cursor=pointer]
+      - button "Alternar modo espejo" [ref=f3e39] [cursor=pointer]
+      - button "Swap L/R" [ref=f3e47] [cursor=pointer]
+      - generic "Estado de Entrada del Sistema Operativo" [ref=f3e51]: AIR GESTURE OFF
+      - 'button "Control macOS: Off" [ref=f3e54] [cursor=pointer]'
+      - button "🔮 Air 3D Studio" [ref=f3e57] [cursor=pointer]:
+        - generic [ref=f3e58]: 🔮
+        - generic [ref=f3e59]: Air 3D Studio
+      - button "⚛️ Air Physics Lab" [ref=f3e60] [cursor=pointer]:
+        - generic [ref=f3e61]: ⚛️
+        - generic [ref=f3e62]: Air Physics Lab
+      - button "🎮 Air Games" [ref=f3e63] [cursor=pointer]:
+        - generic [ref=f3e64]: 🎮
+        - generic [ref=f3e65]: Air Games
+      - button "Modo Fondo" [ref=f3e66] [cursor=pointer]
+      - button "Contrato JSON" [ref=f3e73] [cursor=pointer]
+      - button "Diagnóstico" [ref=f3e78] [cursor=pointer]
+  - complementary [ref=f3e83]:
+    - generic [ref=f3e84]:
+      - generic [ref=f3e85]:
+        - generic [ref=f3e87]: AIR GESTURE — PERCEPTION DEBUG
+        - generic [ref=f3e88]: ONLINE
+      - generic [ref=f3e89]:
+        - generic [ref=f3e90]:
+          - generic [ref=f3e91]: CAMERA
+          - generic [ref=f3e92]:
+            - generic [ref=f3e93]: 0 × 0
+            - generic [ref=f3e94]: "FPS: 0"
+        - generic [ref=f3e95]:
+          - generic [ref=f3e96]: HANDS
+          - generic [ref=f3e97]:
+            - generic [ref=f3e98]: "Left:"
+            - generic [ref=f3e99]: NOT DETECTED
+          - generic [ref=f3e100]:
+            - generic [ref=f3e101]: "Right:"
+            - generic [ref=f3e102]: NOT DETECTED
+        - generic [ref=f3e103]:
+          - generic [ref=f3e104]: FACE
+          - generic [ref=f3e105]:
+            - generic [ref=f3e106]: "Face 001:"
+            - generic [ref=f3e107]: NOT DETECTED
+        - generic [ref=f3e108]:
+          - generic [ref=f3e109]: BODY
+          - generic [ref=f3e110]:
+            - generic [ref=f3e111]: "Body 001:"
+            - generic [ref=f3e112]: NOT DETECTED
+        - generic [ref=f3e113]:
+          - generic [ref=f3e114]: OBJECT
+          - generic [ref=f3e115]:
+            - generic [ref=f3e116]: "Object 001:"
+            - generic [ref=f3e117]: NOT DETECTED
+        - generic [ref=f3e118]:
+          - generic [ref=f3e119]: SPATIAL WORLD MODEL
+          - generic [ref=f3e120]:
+            - generic [ref=f3e121]:
+              - text: "Entities:"
+              - strong [ref=f3e122]: "0"
+            - generic [ref=f3e123]: active in scene
+  - main:
+    - generic: VOLUMEN ESPACIAL ACTIVO
+  - contentinfo:
+    - generic:
+      - generic: Contrato Cinemático Desacoplado (Live Telemetry Event Stream)
+      - generic:
+        - button "Pausar"
+        - button "Copiar JSON"
+        - button "✕"
+    - generic: Esperando detección de manos...
+  - generic [ref=f3e125]:
+    - heading "Iniciar Motion Engine" [level=2] [ref=f3e130]
+    - paragraph [ref=f3e131]:
+      - text: El sistema procesará tu cámara frontal
+      - strong [ref=f3e132]: 100% de forma local
+      - text: sin enviar frames a la nube, calculando la cinemática de 21 landmarks en 3D para ambas manos.
+    - button "Permitir Cámara y Comenzar" [ref=f3e133] [cursor=pointer]

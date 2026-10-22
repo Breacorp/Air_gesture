@@ -1,0 +1,104 @@
+- generic [ref=f1e2]:
+  - banner [ref=f1e4]:
+    - generic [ref=f1e9]:
+      - generic [ref=f1e10]: Air Gesture
+      - generic [ref=f1e11]: Control por gestos · Todo se procesa en tu dispositivo
+    - generic [ref=f1e12]:
+      - generic [ref=f1e13]:
+        - generic [ref=f1e14]: ENGINE
+        - generic [ref=f1e15]: 0 FPS
+      - generic [ref=f1e16]:
+        - generic [ref=f1e17]: LATENCIA
+        - generic [ref=f1e18]: 0 ms
+      - generic [ref=f1e19]:
+        - generic [ref=f1e20]: TRACKER
+        - generic [ref=f1e21]: 0 Manos
+    - generic [ref=f1e22]:
+      - text: MODO DE USO
+      - combobox "Perfil de interacción" [ref=f1e23]:
+        - option "Air Touch" [selected]
+        - option "Universal Desktop"
+        - option "Google Earth 3D"
+        - option "Media / Música"
+        - option "Gaming WASD"
+        - option "Blender 3D"
+    - generic [ref=f1e24]:
+      - button "Alternar vista de cámara" [ref=f1e25] [cursor=pointer]:
+        - generic [ref=f1e29]: Vista de cámara
+      - button "📐 Vista completa" [ref=f1e30] [cursor=pointer]:
+        - generic [ref=f1e31]: 📐
+        - generic [ref=f1e32]: Vista completa
+      - button "Ajustar distancia" [ref=f1e33] [cursor=pointer]
+      - status
+      - generic "Estado de Entrada del Sistema Operativo" [ref=f1e41]: "Sistema: inactivo"
+      - group [ref=f1e44]:
+        - generic "Más opciones" [ref=f1e45] [cursor=pointer]
+  - complementary [ref=f1e46]:
+    - generic [ref=f1e47]:
+      - generic [ref=f1e48]:
+        - generic [ref=f1e50]: AIR GESTURE — PERCEPTION DEBUG
+        - generic [ref=f1e51]: ONLINE
+      - generic [ref=f1e52]:
+        - generic [ref=f1e53]:
+          - generic [ref=f1e54]: CAMERA
+          - generic [ref=f1e55]:
+            - generic [ref=f1e56]: 0 × 0
+            - generic [ref=f1e57]: "FPS: 0"
+        - generic [ref=f1e58]:
+          - generic [ref=f1e59]: HANDS
+          - generic [ref=f1e60]:
+            - generic [ref=f1e61]: "Left:"
+            - generic [ref=f1e62]: NOT DETECTED
+          - generic [ref=f1e63]:
+            - generic [ref=f1e64]: "Right:"
+            - generic [ref=f1e65]: NOT DETECTED
+        - generic [ref=f1e66]:
+          - generic [ref=f1e67]: FACE
+          - generic [ref=f1e68]:
+            - generic [ref=f1e69]: "Face 001:"
+            - generic [ref=f1e70]: NOT DETECTED
+        - generic [ref=f1e71]:
+          - generic [ref=f1e72]: BODY
+          - generic [ref=f1e73]:
+            - generic [ref=f1e74]: "Body 001:"
+            - generic [ref=f1e75]: NOT DETECTED
+        - generic [ref=f1e76]:
+          - generic [ref=f1e77]: OBJECT
+          - generic [ref=f1e78]:
+            - generic [ref=f1e79]: "Object 001:"
+            - generic [ref=f1e80]: NOT DETECTED
+        - generic [ref=f1e81]:
+          - generic [ref=f1e82]: SPATIAL WORLD MODEL
+          - generic [ref=f1e83]:
+            - generic [ref=f1e84]:
+              - text: "Entities:"
+              - strong [ref=f1e85]: "0"
+            - generic [ref=f1e86]: active in scene
+  - main:
+    - generic:
+      - text: AIR GESTURE
+      - heading "Controlá tu computadora con gestos" [level=1]
+      - paragraph: Activá la cámara y mové una mano frente a ella. El seguimiento se procesa en este dispositivo.
+      - paragraph: "Air Touch: ☝️ mover · 🤏 clic y arrastrar · ✌️ desplazarse"
+      - generic: Cámara sin iniciar Sin enviar video a la nube
+      - button "Activar cámara"
+    - generic: VOLUMEN ESPACIAL ACTIVO
+  - contentinfo:
+    - generic:
+      - generic: Contrato Cinemático Desacoplado (Live Telemetry Event Stream)
+      - generic:
+        - button "Pausar"
+        - button "Copiar JSON"
+        - button "✕"
+    - generic: Esperando detección de manos...
+  - generic [ref=f1e88]:
+    - heading "Activar cámara" [level=2] [ref=f1e93]
+    - paragraph [ref=f1e94]: Usamos la cámara para seguir tus manos. El video se procesa en este dispositivo y no se envía a internet. También podés explorar sin activarla.
+    - button "Permitir acceso y empezar" [ref=f1e95] [cursor=pointer]
+    - status
+    - button "Explorar sin cámara" [ref=f1e97] [cursor=pointer]
+  - navigation "Navegación de Air Gesture" [ref=f1e98]:
+    - button "Control" [ref=f1e99]
+    - button "Juegos" [ref=f1e102]
+    - button "Laboratorios" [ref=f1e106]: Labs
+    - button "Diagnóstico" [ref=f1e110]

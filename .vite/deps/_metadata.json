@@ -1,0 +1,44 @@
+{
+  "hash": "8149cf14",
+  "configHash": "33bd7ace",
+  "lockfileHash": "b133d6c0",
+  "browserHash": "c9e25a24",
+  "optimized": {
+    "@mediapipe/tasks-vision": {
+      "src": "../../node_modules/@mediapipe/tasks-vision/vision_bundle.mjs",
+      "file": "@mediapipe_tasks-vision.js",
+      "fileHash": "24a66b8a",
+      "needsInterop": false
+    },
+    "cannon-es": {
+      "src": "../../node_modules/cannon-es/dist/cannon-es.js",
+      "file": "cannon-es.js",
+      "fileHash": "6fcf73f9",
+      "needsInterop": false
+    },
+    "three": {
+      "src": "../../node_modules/three/build/three.module.js",
+      "file": "three.js",
+      "fileHash": "61ca6d87",
+      "needsInterop": false
+    },
+    "three/examples/jsm/loaders/OBJLoader.js": {
+      "src": "../../node_modules/three/examples/jsm/loaders/OBJLoader.js",
+      "file": "three_examples_jsm_loaders_OBJLoader__js.js",
+      "fileHash": "0b670c2f",
+      "needsInterop": false
+    },
+    "three/examples/jsm/loaders/STLLoader.js": {
+      "src": "../../node_modules/three/examples/jsm/loaders/STLLoader.js",
+      "file": "three_examples_jsm_loaders_STLLoader__js.js",
+      "fileHash": "913dd69a",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "three.module-Bj7iJlUn": {
+      "file": "three.module-Bj7iJlUn.js",
+      "isDynamicEntry": false
+    }
+  }
+}

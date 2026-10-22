@@ -1,0 +1,100 @@
+- generic [ref=f1e2]:
+  - banner [ref=f1e4]:
+    - generic [ref=f1e9]:
+      - generic [ref=f1e10]: Air Gesture
+      - generic [ref=f1e11]: Interacción gestual · Procesamiento local
+    - generic [ref=f1e12]:
+      - generic [ref=f1e13]:
+        - generic [ref=f1e14]: ENGINE
+        - generic [ref=f1e15]: 0 FPS
+      - generic [ref=f1e16]:
+        - generic [ref=f1e17]: LATENCIA
+        - generic [ref=f1e18]: 0 ms
+      - generic [ref=f1e19]:
+        - generic [ref=f1e20]: TRACKER
+        - generic [ref=f1e21]: 0 Manos
+    - generic [ref=f1e22]:
+      - button "Modo AR" [ref=f1e23] [cursor=pointer]
+      - button "📐 Full Sensor View" [ref=f1e28] [cursor=pointer]:
+        - generic [ref=f1e29]: 📐
+        - generic [ref=f1e30]: Full Sensor View
+      - button "Calibrar Z" [ref=f1e31] [cursor=pointer]
+      - button "Alternar modo espejo" [ref=f1e39] [cursor=pointer]
+      - button "Swap L/R" [ref=f1e47] [cursor=pointer]
+      - generic "Estado de Entrada del Sistema Operativo" [ref=f1e51]: AIR GESTURE OFF
+      - 'button "Control macOS: Off" [ref=f1e54] [cursor=pointer]'
+      - button "🔮 Air 3D Studio" [ref=f1e57] [cursor=pointer]:
+        - generic [ref=f1e58]: 🔮
+        - generic [ref=f1e59]: Air 3D Studio
+      - button "⚛️ Air Physics Lab" [ref=f1e60] [cursor=pointer]:
+        - generic [ref=f1e61]: ⚛️
+        - generic [ref=f1e62]: Air Physics Lab
+      - button "🎮 Air Games" [ref=f1e63] [cursor=pointer]:
+        - generic [ref=f1e64]: 🎮
+        - generic [ref=f1e65]: Air Games
+      - button "Modo Fondo" [ref=f1e66] [cursor=pointer]
+      - button "Contrato JSON" [ref=f1e73] [cursor=pointer]
+      - button "Diagnóstico" [ref=f1e78] [cursor=pointer]
+  - complementary [ref=f1e83]:
+    - generic [ref=f1e84]:
+      - generic [ref=f1e85]:
+        - generic [ref=f1e87]: AIR GESTURE — PERCEPTION DEBUG
+        - generic [ref=f1e88]: ONLINE
+      - generic [ref=f1e89]:
+        - generic [ref=f1e90]:
+          - generic [ref=f1e91]: CAMERA
+          - generic [ref=f1e92]:
+            - generic [ref=f1e93]: 0 × 0
+            - generic [ref=f1e94]: "FPS: 0"
+        - generic [ref=f1e95]:
+          - generic [ref=f1e96]: HANDS
+          - generic [ref=f1e97]:
+            - generic [ref=f1e98]: "Left:"
+            - generic [ref=f1e99]: NOT DETECTED
+          - generic [ref=f1e100]:
+            - generic [ref=f1e101]: "Right:"
+            - generic [ref=f1e102]: NOT DETECTED
+        - generic [ref=f1e103]:
+          - generic [ref=f1e104]: FACE
+          - generic [ref=f1e105]:
+            - generic [ref=f1e106]: "Face 001:"
+            - generic [ref=f1e107]: NOT DETECTED
+        - generic [ref=f1e108]:
+          - generic [ref=f1e109]: BODY
+          - generic [ref=f1e110]:
+            - generic [ref=f1e111]: "Body 001:"
+            - generic [ref=f1e112]: NOT DETECTED
+        - generic [ref=f1e113]:
+          - generic [ref=f1e114]: OBJECT
+          - generic [ref=f1e115]:
+            - generic [ref=f1e116]: "Object 001:"
+            - generic [ref=f1e117]: NOT DETECTED
+        - generic [ref=f1e118]:
+          - generic [ref=f1e119]: SPATIAL WORLD MODEL
+          - generic [ref=f1e120]:
+            - generic [ref=f1e121]:
+              - text: "Entities:"
+              - strong [ref=f1e122]: "0"
+            - generic [ref=f1e123]: active in scene
+  - main:
+    - generic: VOLUMEN ESPACIAL ACTIVO
+  - contentinfo:
+    - generic:
+      - generic: Contrato Cinemático Desacoplado (Live Telemetry Event Stream)
+      - generic:
+        - button "Pausar"
+        - button "Copiar JSON"
+        - button "✕"
+    - generic: Esperando detección de manos...
+  - generic [ref=f1e125]:
+    - heading "Iniciar Motion Engine" [level=2] [ref=f1e130]
+    - paragraph [ref=f1e131]:
+      - text: El sistema procesará tu cámara frontal
+      - strong [ref=f1e132]: 100% de forma local
+      - text: sin enviar frames a la nube, calculando la cinemática de 21 landmarks en 3D para ambas manos.
+    - button "Permitir Cámara y Comenzar" [ref=f1e133] [cursor=pointer]
+  - navigation "Navegación de Air Gesture" [ref=f1e135]:
+    - button "Control" [ref=f1e136]
+    - button "Juegos" [ref=f1e139]
+    - button "Estudio 3D" [ref=f1e143]
+    - button "Diagnóstico" [ref=f1e147]

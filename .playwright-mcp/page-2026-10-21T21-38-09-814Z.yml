@@ -1,0 +1,95 @@
+- generic [ref=f17e2]:
+  - banner [ref=f17e4]:
+    - generic [ref=f17e9]:
+      - generic [ref=f17e10]: Air Gesture
+      - generic [ref=f17e11]: Control Center • macOS Background Engine
+    - generic [ref=f17e12]:
+      - generic [ref=f17e13]:
+        - generic [ref=f17e14]: ENGINE
+        - generic [ref=f17e15]: 0 FPS
+      - generic [ref=f17e16]:
+        - generic [ref=f17e17]: LATENCIA
+        - generic [ref=f17e18]: 0 ms
+      - generic [ref=f17e19]:
+        - generic [ref=f17e20]: TRACKER
+        - generic [ref=f17e21]: 0 Manos
+    - generic [ref=f17e22]:
+      - button "Modo AR" [ref=f17e23] [cursor=pointer]
+      - button "📐 Full Sensor View" [ref=f17e28] [cursor=pointer]:
+        - generic [ref=f17e29]: 📐
+        - generic [ref=f17e30]: Full Sensor View
+      - button "Calibrar Z" [ref=f17e31] [cursor=pointer]
+      - button "Alternar modo espejo" [ref=f17e39] [cursor=pointer]
+      - button "Swap L/R" [ref=f17e47] [cursor=pointer]
+      - generic "Estado de Entrada del Sistema Operativo" [ref=f17e51]: AIR GESTURE OFF
+      - 'button "Control macOS: Off" [ref=f17e54] [cursor=pointer]'
+      - button "🔮 Air 3D Studio" [ref=f17e57] [cursor=pointer]:
+        - generic [ref=f17e58]: 🔮
+        - generic [ref=f17e59]: Air 3D Studio
+      - button "⚛️ Air Physics Lab" [ref=f17e60] [cursor=pointer]:
+        - generic [ref=f17e61]: ⚛️
+        - generic [ref=f17e62]: Air Physics Lab
+      - button "🎮 Air Games" [ref=f17e63] [cursor=pointer]:
+        - generic [ref=f17e64]: 🎮
+        - generic [ref=f17e65]: Air Games
+      - button "Modo Fondo" [ref=f17e66] [cursor=pointer]
+      - button "Contrato JSON" [ref=f17e73] [cursor=pointer]
+      - button "Diagnóstico" [ref=f17e78] [cursor=pointer]
+  - complementary [ref=f17e83]:
+    - generic [ref=f17e84]:
+      - generic [ref=f17e85]:
+        - generic [ref=f17e87]: AIR GESTURE — PERCEPTION DEBUG
+        - generic [ref=f17e88]: ONLINE
+      - generic [ref=f17e89]:
+        - generic [ref=f17e90]:
+          - generic [ref=f17e91]: CAMERA
+          - generic [ref=f17e92]:
+            - generic [ref=f17e93]: 0 × 0
+            - generic [ref=f17e94]: "FPS: 0"
+        - generic [ref=f17e95]:
+          - generic [ref=f17e96]: HANDS
+          - generic [ref=f17e97]:
+            - generic [ref=f17e98]: "Left:"
+            - generic [ref=f17e99]: NOT DETECTED
+          - generic [ref=f17e100]:
+            - generic [ref=f17e101]: "Right:"
+            - generic [ref=f17e102]: NOT DETECTED
+        - generic [ref=f17e103]:
+          - generic [ref=f17e104]: FACE
+          - generic [ref=f17e105]:
+            - generic [ref=f17e106]: "Face 001:"
+            - generic [ref=f17e107]: NOT DETECTED
+        - generic [ref=f17e108]:
+          - generic [ref=f17e109]: BODY
+          - generic [ref=f17e110]:
+            - generic [ref=f17e111]: "Body 001:"
+            - generic [ref=f17e112]: NOT DETECTED
+        - generic [ref=f17e113]:
+          - generic [ref=f17e114]: OBJECT
+          - generic [ref=f17e115]:
+            - generic [ref=f17e116]: "Object 001:"
+            - generic [ref=f17e117]: NOT DETECTED
+        - generic [ref=f17e118]:
+          - generic [ref=f17e119]: SPATIAL WORLD MODEL
+          - generic [ref=f17e120]:
+            - generic [ref=f17e121]:
+              - text: "Entities:"
+              - strong [ref=f17e122]: "0"
+            - generic [ref=f17e123]: active in scene
+  - main:
+    - generic: VOLUMEN ESPACIAL ACTIVO
+  - contentinfo:
+    - generic:
+      - generic: Contrato Cinemático Desacoplado (Live Telemetry Event Stream)
+      - generic:
+        - button "Pausar"
+        - button "Copiar JSON"
+        - button "✕"
+    - generic: Esperando detección de manos...
+  - generic [ref=f17e125]:
+    - heading "Iniciar Motion Engine" [level=2] [ref=f17e130]
+    - paragraph [ref=f17e131]:
+      - text: El sistema procesará tu cámara frontal
+      - strong [ref=f17e132]: 100% de forma local
+      - text: sin enviar frames a la nube, calculando la cinemática de 21 landmarks en 3D para ambas manos.
+    - button "Permitir Cámara y Comenzar" [ref=f17e133] [cursor=pointer]

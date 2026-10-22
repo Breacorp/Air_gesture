@@ -1,0 +1,95 @@
+- generic [ref=e2]:
+  - banner [ref=e4]:
+    - generic [ref=e9]:
+      - generic [ref=e10]: Air Gesture
+      - generic [ref=e11]: Control Center • macOS Background Engine
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - generic [ref=e14]: ENGINE
+        - generic [ref=e15]: 0 FPS
+      - generic [ref=e16]:
+        - generic [ref=e17]: LATENCIA
+        - generic [ref=e18]: 0 ms
+      - generic [ref=e19]:
+        - generic [ref=e20]: TRACKER
+        - generic [ref=e21]: 0 Manos
+    - generic [ref=e22]:
+      - button "Modo AR" [ref=e23] [cursor=pointer]
+      - button "📐 Full Sensor View" [ref=e28] [cursor=pointer]:
+        - generic [ref=e29]: 📐
+        - generic [ref=e30]: Full Sensor View
+      - button "Calibrar Z" [ref=e31] [cursor=pointer]
+      - button "Alternar modo espejo" [ref=e39] [cursor=pointer]
+      - button "Swap L/R" [ref=e47] [cursor=pointer]
+      - generic "Estado de Entrada del Sistema Operativo" [ref=e51]: AIR GESTURE OFF
+      - 'button "Control macOS: Off" [ref=e54] [cursor=pointer]'
+      - button "🔮 Air 3D Studio" [ref=e57] [cursor=pointer]:
+        - generic [ref=e58]: 🔮
+        - generic [ref=e59]: Air 3D Studio
+      - button "⚛️ Air Physics Lab" [ref=e60] [cursor=pointer]:
+        - generic [ref=e61]: ⚛️
+        - generic [ref=e62]: Air Physics Lab
+      - button "🎮 Air Games" [ref=e63] [cursor=pointer]:
+        - generic [ref=e64]: 🎮
+        - generic [ref=e65]: Air Games
+      - button "Modo Fondo" [ref=e66] [cursor=pointer]
+      - button "Contrato JSON" [ref=e73] [cursor=pointer]
+      - button "Diagnóstico" [ref=e78] [cursor=pointer]
+  - complementary [ref=e83]:
+    - generic [ref=e84]:
+      - generic [ref=e85]:
+        - generic [ref=e87]: AIR GESTURE — PERCEPTION DEBUG
+        - generic [ref=e88]: ONLINE
+      - generic [ref=e89]:
+        - generic [ref=e90]:
+          - generic [ref=e91]: CAMERA
+          - generic [ref=e92]:
+            - generic [ref=e93]: 0 × 0
+            - generic [ref=e94]: "FPS: 0"
+        - generic [ref=e95]:
+          - generic [ref=e96]: HANDS
+          - generic [ref=e97]:
+            - generic [ref=e98]: "Left:"
+            - generic [ref=e99]: NOT DETECTED
+          - generic [ref=e100]:
+            - generic [ref=e101]: "Right:"
+            - generic [ref=e102]: NOT DETECTED
+        - generic [ref=e103]:
+          - generic [ref=e104]: FACE
+          - generic [ref=e105]:
+            - generic [ref=e106]: "Face 001:"
+            - generic [ref=e107]: NOT DETECTED
+        - generic [ref=e108]:
+          - generic [ref=e109]: BODY
+          - generic [ref=e110]:
+            - generic [ref=e111]: "Body 001:"
+            - generic [ref=e112]: NOT DETECTED
+        - generic [ref=e113]:
+          - generic [ref=e114]: OBJECT
+          - generic [ref=e115]:
+            - generic [ref=e116]: "Object 001:"
+            - generic [ref=e117]: NOT DETECTED
+        - generic [ref=e118]:
+          - generic [ref=e119]: SPATIAL WORLD MODEL
+          - generic [ref=e120]:
+            - generic [ref=e121]:
+              - text: "Entities:"
+              - strong [ref=e122]: "0"
+            - generic [ref=e123]: active in scene
+  - main:
+    - generic: VOLUMEN ESPACIAL ACTIVO
+  - contentinfo:
+    - generic:
+      - generic: Contrato Cinemático Desacoplado (Live Telemetry Event Stream)
+      - generic:
+        - button "Pausar"
+        - button "Copiar JSON"
+        - button "✕"
+    - generic: Esperando detección de manos...
+  - generic [ref=e125]:
+    - heading "Iniciar Motion Engine" [level=2] [ref=e130]
+    - paragraph [ref=e131]:
+      - text: El sistema procesará tu cámara frontal
+      - strong [ref=e132]: 100% de forma local
+      - text: sin enviar frames a la nube, calculando la cinemática de 21 landmarks en 3D para ambas manos.
+    - button "Permitir Cámara y Comenzar" [ref=e133] [cursor=pointer]
