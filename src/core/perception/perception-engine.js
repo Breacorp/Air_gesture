@@ -25,6 +25,13 @@ export class PerceptionEngine {
   constructor(options = {}) {
     this.videoElement = null;
     this._loopRunning = false;
+    this._loopGeneration = 0;
+    this._processingFrameId = null;
+    this._initializationPromise = null;
+    this._isInitialized = false;
+    this._cameraStartPromise = null;
+    this._startingVideoElement = null;
+    this._cancelVideoReadyWait = null;
     this.state = 'OFF'; // 'OFF' | 'STARTING_CAMERA' | 'CAMERA_READY' | 'RUNNING'
     this.lastVideoTime = -1;
     this.onFrameCallback = null;
@@ -33,13 +40,13 @@ export class PerceptionEngine {
     // Spatial World Model (Single Source of Truth)
     this.worldModel = options.worldModel || new SpatialWorldModel();
 
-    // Multimodal Sensory Trackers - Active by default
+    // Hand tracking is core; body and face inference are opt-in.
     this.handTracker = new HandTracker({
       mirror: options.mirror !== undefined ? options.mirror : true,
       swapHands: options.swapHands || false
     });
-    this.bodyTracker = new BodyTracker({ enabled: true });
-    this.faceTracker = new FaceTracker({ enabled: true });
+    this.bodyTracker = new BodyTracker({ enabled: false });
+    this.faceTracker = new FaceTracker({ enabled: false });
     this.genericObjectTracker = new GenericObjectTracker({ enabled: false });
     this.digitalTwinManager = new DigitalTwinManager({ enabled: false });
     this.objectTracker = new ObjectTracker({ enabled: false });
@@ -71,8 +78,8 @@ export class PerceptionEngine {
       detectedBodiesCount: 0,
       detectedObjectsCount: 0,
       activeEntitiesCount: 0,
-      isFaceTrackingActive: true,
-      isBodyTrackingActive: true,
+      isFaceTrackingActive: false,
+      isBodyTrackingActive: false,
       isObjectTrackingActive: true
     };
 
@@ -128,7 +135,7 @@ export class PerceptionEngine {
       return false;
     } else {
       await this.bodyTracker.enable();
-      this.stats.isBodyTrackingActive = true;
+      this.stats.isBodyTrackingActive = this.bodyTracker.enabled;
       return true;
     }
   }
@@ -140,7 +147,7 @@ export class PerceptionEngine {
       return false;
     } else {
       await this.faceTracker.enable();
-      this.stats.isFaceTrackingActive = true;
+      this.stats.isFaceTrackingActive = this.faceTracker.enabled;
       return true;
     }
   }
@@ -176,29 +183,29 @@ export class PerceptionEngine {
   }
 
   /**
-   * Initializes active perception models (Hands, Face, Body, Objects)
+   * Initializes the hand model required for core interaction.
+   * Body and face models are loaded only when the user enables those trackers.
    */
   async initialize() {
+    if (this._isInitialized) return true;
+    if (this._initializationPromise) return this._initializationPromise;
+
     console.log('[PerceptionEngine] Initializing perception models...');
-    try {
-      await this.handTracker.initialize();
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      throw new Error(`No se pudo cargar el modelo local de manos. Comprobá la conexión o prepará los recursos offline y volvé a intentar. ${reason}`);
-    }
-    try {
-      await this.bodyTracker.initialize();
-    } catch (e) {
-      console.warn('[PerceptionEngine] BodyTracker init:', e);
-    }
-    try {
-      await this.faceTracker.initialize();
-    } catch (e) {
-      console.warn('[PerceptionEngine] FaceTracker init:', e);
-    }
-    this.stats.isFaceTrackingActive = this.faceTracker.isInitialized;
-    this.stats.isBodyTrackingActive = this.bodyTracker.isInitialized;
-    return true;
+    this._initializationPromise = (async () => {
+      try {
+        await this.handTracker.initialize();
+        this._isInitialized = true;
+        this.stats.isFaceTrackingActive = false;
+        this.stats.isBodyTrackingActive = false;
+        return true;
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        throw new Error(`No se pudo cargar el modelo local de manos. Comprobá la conexión o prepará los recursos offline y volvé a intentar. ${reason}`);
+      } finally {
+        this._initializationPromise = null;
+      }
+    })();
+    return this._initializationPromise;
   }
 
   /**
@@ -216,24 +223,32 @@ export class PerceptionEngine {
     if (isReady()) return true;
 
     return new Promise((resolve) => {
-      const startTime = performance.now();
-
-      const check = () => {
-        if (isReady()) {
-          resolve(true);
-          return;
-        }
-        if (performance.now() - startTime > timeoutMs) {
-          console.warn('[PerceptionEngine] Timeout waiting for video dimensions');
-          resolve(false);
-          return;
-        }
-        requestAnimationFrame(check);
+      let settled = false;
+      const events = ['loadedmetadata', 'loadeddata', 'canplay'];
+      const cleanup = () => {
+        clearTimeout(timeoutId);
+        clearInterval(pollId);
+        events.forEach((event) => videoElement.removeEventListener(event, check));
+        if (this._cancelVideoReadyWait === cancel) this._cancelVideoReadyWait = null;
       };
+      const finish = (ready) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(ready);
+      };
+      const check = () => {
+        if (isReady()) finish(true);
+      };
+      const cancel = () => finish(false);
+      const timeoutId = setTimeout(() => {
+        console.warn('[PerceptionEngine] Timeout waiting for video dimensions');
+        finish(false);
+      }, timeoutMs);
+      const pollId = setInterval(check, 50);
 
-      videoElement.addEventListener('loadedmetadata', () => check(), { once: true });
-      videoElement.addEventListener('loadeddata', () => check(), { once: true });
-      videoElement.addEventListener('canplay', () => check(), { once: true });
+      this._cancelVideoReadyWait = cancel;
+      events.forEach((event) => videoElement.addEventListener(event, check));
       check();
     });
   }
@@ -244,29 +259,65 @@ export class PerceptionEngine {
    * @param {string} [deviceId]
    */
   async startCamera(videoElement, deviceId = null) {
+    if (this._cameraStartPromise) {
+      if (this._startingVideoElement === videoElement) return this._cameraStartPromise;
+      throw new Error('Ya hay un inicio de cámara en curso.');
+    }
+    if (this._loopRunning && this.videoElement === videoElement && this.isRunning) {
+      return this.cameraManager.sources.get('cam-front');
+    }
+    if (this._loopRunning || this.state !== 'OFF') this.stop();
+
+    const generation = ++this._loopGeneration;
     this.videoElement = videoElement;
     this.state = 'STARTING_CAMERA';
+    this._startingVideoElement = videoElement;
 
-    const source = await this.cameraManager.startCamera({
-      role: 'front',
-      videoElement,
-      deviceId
-    });
+    const startPromise = (async () => {
+      let source = null;
+      try {
+        source = await this.cameraManager.startCamera({
+          role: 'front',
+          videoElement,
+          deviceId
+        });
+        if (generation !== this._loopGeneration) {
+          this.cameraManager.stopCamera(source.id);
+          throw new Error('El inicio de la cámara fue cancelado.');
+        }
 
-    // Wait until camera video is playing and has positive dimensions
-    const videoReady = await this._waitForVideoReady(videoElement);
-    if (!videoReady) {
-      this.cameraManager.stopCamera(source.id);
-      this.state = 'OFF';
-      throw new Error('La cámara se autorizó, pero el video no entregó imágenes. Cerrá otras apps que la usen y volvé a intentar.');
-    }
+        const videoReady = await this._waitForVideoReady(videoElement);
+        if (generation !== this._loopGeneration) {
+          this.cameraManager.stopCamera(source.id);
+          throw new Error('El inicio de la cámara fue cancelado.');
+        }
+        if (!videoReady) {
+          this.cameraManager.stopCamera(source.id);
+          throw new Error('La cámara se autorizó, pero el video no entregó imágenes. Cerrá otras apps que la usen y volvé a intentar.');
+        }
 
-    this.state = 'CAMERA_READY';
-
-    this._loopRunning = true;
-    this.state = 'RUNNING';
-    this._startProcessingLoop();
-    return source;
+        this.state = 'CAMERA_READY';
+        this.lastVideoTime = -1;
+        this._loopRunning = true;
+        this.state = 'RUNNING';
+        this._startProcessingLoop();
+        return source;
+      } catch (error) {
+        if (generation === this._loopGeneration) {
+          if (source) this.cameraManager.stopCamera(source.id);
+          this.state = 'OFF';
+          this._loopRunning = false;
+        }
+        throw error;
+      } finally {
+        if (this._cameraStartPromise === startPromise) {
+          this._cameraStartPromise = null;
+          this._startingVideoElement = null;
+        }
+      }
+    })();
+    this._cameraStartPromise = startPromise;
+    return startPromise;
   }
 
   /**
@@ -298,8 +349,14 @@ export class PerceptionEngine {
   }
 
   stop() {
+    this._loopGeneration++;
     this._loopRunning = false;
     this.state = 'OFF';
+    if (this._processingFrameId !== null) {
+      cancelAnimationFrame(this._processingFrameId);
+      this._processingFrameId = null;
+    }
+    this._cancelVideoReadyWait?.();
     this.cameraManager.stopAll();
     if (this.videoElement && this.videoElement.srcObject) {
       const tracks = typeof this.videoElement.srcObject.getTracks === 'function'
@@ -308,6 +365,28 @@ export class PerceptionEngine {
       tracks.forEach(track => track.stop());
       this.videoElement.srcObject = null;
     }
+    this.lastVideoTime = -1;
+    for (const side of ['left', 'right']) {
+      this.diagnostics.hands[side].detected = false;
+      this.diagnostics.hands[side].landmarksCount = 0;
+      this.diagnostics.hands[side].confidence = 0;
+    }
+    this.stats.detectedHandsCount = 0;
+    try {
+      this.onFrameCallback?.({
+        hands: [],
+        body: null,
+        face: null,
+        worldModel: this.worldModel,
+        timestamp: performance.now(),
+        stats: this.stats,
+        diagnostics: this.diagnostics,
+        videoWidth: 0,
+        videoHeight: 0
+      });
+    } catch (error) {
+      console.error('[PerceptionEngine] Stop callback error:', error);
+    }
   }
 
   setOnFrame(callback) {
@@ -315,8 +394,20 @@ export class PerceptionEngine {
   }
 
   _startProcessingLoop() {
+    if (!this._loopRunning || this._processingFrameId !== null) return;
+    const generation = this._loopGeneration;
+    let frameId = null;
+    const schedule = () => {
+      if (!this._loopRunning || generation !== this._loopGeneration || this._processingFrameId !== null) return;
+      frameId = requestAnimationFrame(() => {
+        if (this._processingFrameId === frameId) this._processingFrameId = null;
+        process();
+      });
+      this._processingFrameId = frameId;
+    };
+
     const process = () => {
-      if (!this._loopRunning) return;
+      if (!this._loopRunning || generation !== this._loopGeneration) return;
 
       const now = performance.now();
 
@@ -329,7 +420,7 @@ export class PerceptionEngine {
       );
 
       if (!isVideoReady) {
-        requestAnimationFrame(process);
+        schedule();
         return;
       }
 
@@ -399,6 +490,9 @@ export class PerceptionEngine {
             this.stats.detectedBodiesCount = 0;
             this.diagnostics.body.detected = false;
           }
+        } else {
+          this.stats.detectedBodiesCount = 0;
+          this.diagnostics.body.detected = false;
         }
 
         // C. Face Tracking (Head Pose, Gaze, Expressions)
@@ -422,6 +516,9 @@ export class PerceptionEngine {
             this.stats.detectedFacesCount = 0;
             this.diagnostics.face.detected = false;
           }
+        } else {
+          this.stats.detectedFacesCount = 0;
+          this.diagnostics.face.detected = false;
         }
 
         // D. Digital Twin & Multi-View Object Reconstruction (Real -> Virtual)
@@ -524,9 +621,9 @@ export class PerceptionEngine {
         }
       }
 
-      requestAnimationFrame(process);
+      schedule();
     };
 
-    requestAnimationFrame(process);
+    schedule();
   }
 }

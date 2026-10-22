@@ -52,10 +52,14 @@ export class BodyTracker {
   }
 
   async enable() {
-    this.enabled = true;
     if (!this.isInitialized) {
-      await this.initialize();
+      const initialized = await this.initialize();
+      if (!initialized) {
+        throw new Error('No se pudo inicializar el seguimiento corporal local.');
+      }
     }
+    this.enabled = true;
+    return true;
   }
 
   disable() {

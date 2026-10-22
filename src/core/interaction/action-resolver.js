@@ -126,11 +126,6 @@ export class ActionResolver {
     const x = intent.position?.screenX || intent.position?.x || 0;
     const y = intent.position?.screenY || intent.position?.y || 0;
 
-    if (context.is3D()) {
-      const studio = context.metadata?.studio || this.studio;
-      if (studio) studio.isHoveringModel = true;
-    }
-
     // Always keep pointer coordinates synchronized
     this.browser?.movePointer?.(x, y);
     this.macos?.movePointer?.(x, y);
@@ -170,10 +165,6 @@ export class ActionResolver {
       }
 
       if (studio && studio.modelContainer) {
-        studio.isGrabbing = true;
-        studio.interactionMode = 'fine_pinch';
-        studio.currentPoseLabel = 'AGARRADO';
-        this.contextEngine?.setStickyHold(context.targetType, context.targetEntity, context.targetId, context.environment, caps);
         return;
       }
     }
@@ -209,9 +200,6 @@ export class ActionResolver {
       }
 
       if (studio && studio.modelContainer) {
-        studio.modelContainer.position.x += delta.x * 0.005;
-        studio.modelContainer.position.y -= delta.y * 0.005;
-        if (delta.z) studio.modelContainer.position.z += delta.z * 0.005;
         return;
       }
     }
@@ -266,15 +254,9 @@ export class ActionResolver {
     const button = intent.payload?.button || 'left';
 
     if (context.is3D()) {
-      const studio = context.metadata?.studio || this.studio;
       const physicsLab = context.metadata?.physicsLab || this.physicsLab;
 
       if (physicsLab) physicsLab.grabbedBody = null;
-      if (studio) {
-        studio.isGrabbing = false;
-        studio.interactionMode = 'idle';
-        studio.currentPoseLabel = 'LIBRE';
-      }
     }
 
     if (context.isPhysical() && context.targetEntity) {
@@ -297,8 +279,6 @@ export class ActionResolver {
       const physicsLab = context.metadata?.physicsLab || this.physicsLab;
 
       if (studio && studio.modelContainer) {
-        const factor = 1.0 + (delta > 0 ? 0.04 : -0.04);
-        studio.modelContainer.scale.multiplyScalar(factor);
         return;
       }
 
@@ -325,7 +305,6 @@ export class ActionResolver {
     if (context.is3D()) {
       const studio = context.metadata?.studio || this.studio;
       if (studio && studio.modelContainer) {
-        studio.modelContainer.rotation.y += angleDelta * 1.5;
         return;
       }
     }
@@ -350,12 +329,6 @@ export class ActionResolver {
       return;
     }
 
-    if (context.is3D()) {
-      const studio = context.metadata?.studio || this.studio;
-      if (studio && studio.modelContainer && intent.velocity) {
-        studio.modelContainer.position.z += (intent.type === IntentType.PUSH ? -0.05 : 0.05);
-      }
-    }
   }
 
   // --- FAILSAFE RESOLUTIONS ---

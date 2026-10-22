@@ -12,6 +12,7 @@ export class MacOSClientAdapter extends OSAdapter {
     this.wsUrl = wsUrl;
     this.ws = null;
     this.isConnected = false;
+    this.connectionError = null;
     this.onStatusChange = null;
     this.onScreenResolution = null;
 
@@ -26,11 +27,14 @@ export class MacOSClientAdapter extends OSAdapter {
     }
 
     try {
+      this.connectionError = null;
       this.ws = new WebSocket(this.wsUrl);
+      this.onStatusChange?.({ connected: false, connecting: true });
 
       this.ws.onopen = () => {
         this.isConnected = true;
-        if (this.onStatusChange) this.onStatusChange({ connected: true });
+        this.connectionError = null;
+        this.onStatusChange?.({ connected: true, connecting: false });
         console.log('[macOS Input Adapter] Connected to native Quartz daemon');
       };
 
@@ -50,16 +54,28 @@ export class MacOSClientAdapter extends OSAdapter {
 
       this.ws.onclose = () => {
         this.isConnected = false;
-        if (this.onStatusChange) this.onStatusChange({ connected: false });
-        console.log('[macOS Input Adapter] Daemon disconnected');
+        this.isEnabled = false;
+        const error = this.connectionError;
+        this.connectionError = null;
+        this.onStatusChange?.({
+          connected: false,
+          connecting: false,
+          ...(error ? { error } : {})
+        });
       };
 
-      this.ws.onerror = (err) => {
+      this.ws.onerror = (error) => {
         this.isConnected = false;
-        if (this.onStatusChange) this.onStatusChange({ connected: false, error: err });
+        this.isEnabled = false;
+        this.connectionError = error;
+        this.onStatusChange?.({ connected: false, connecting: false, error });
       };
-    } catch (e) {
-      console.warn('[macOS Input Adapter] Connection failed:', e);
+    } catch (error) {
+      this.ws = null;
+      this.isConnected = false;
+      this.isEnabled = false;
+      this.connectionError = null;
+      this.onStatusChange?.({ connected: false, connecting: false, error });
     }
   }
 

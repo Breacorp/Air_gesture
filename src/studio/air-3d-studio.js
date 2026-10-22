@@ -2,14 +2,15 @@
  * Air 3D Studio - Holographic Spatial CAD & 3D Model Manipulator
  * Manipulates .STL, .OBJ and procedural holographic models directly with hands:
  * - ☝️ Raycast laser pointer & contact reticle
- * - 🤏 Pinch grab & 3D translate (X, Y, Z depth)
- * - ✋✋ Two-hand spatial scale & orbital 360° rotation
+ * - Pinch-confirmed translation, bimanual scale, and quaternion rotation
+ * - A free-hand peace pose rotates the held model or orbits its camera
  * - Auto-centering, Exploded View, CAD Telemetry, and Shading modes
  */
 
 import * as THREE from 'three';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+import { GripInteractionController } from './grip-interaction-controller.js';
 
 export class Air3DStudio {
   constructor(scene, camera, renderer) {
@@ -40,32 +41,43 @@ export class Air3DStudio {
 
     // Interaction State & Anchors (Anchor-Based relative transforms)
     this.isGrabbing = false;
-    this.interactionMode = 'idle'; // 'idle' | 'fist_grab' | 'fine_pinch' | 'palm_levitate' | 'peace_explode' | 'palm_freeze' | 'bimanual'
+    this.interactionMode = 'idle'; // 'idle' | 'one-hand' | 'two-hand'
     this.currentPoseLabel = 'LIBRE';
-    this.grabAnchorHand = null;
-    this.grabAnchorPalm = null;
-    this.grabAnchorModelPos = new THREE.Vector3();
-    this.grabAnchorModelRot = new THREE.Euler();
-    this.grabAnchorHandAngles = null;
-    this.grabAnchorPalmAngles = null;
     this.isHoveringModel = false;
 
     // Smoothed Target Transforms for fluid interpolation
     this.targetPosition = new THREE.Vector3(0, 0, 0);
-    this.targetRotation = new THREE.Euler(0, 0, 0);
+    this.targetQuaternion = new THREE.Quaternion();
     this.targetScale = 1.0;
+    this.baseModelScale = 1.0;
+    this.bimanualMode = 'combined';
+    this.rotationTarget = 'object';
+    this.rotationGestureHoldMs = 100;
+    this.rotationGestureCandidates = new Map();
+    this.rotationHand = null;
+    this.rotationAnchor = null;
+    this.currentControlMode = 'idle';
+    this.initialCameraPosition = this.camera.position.clone();
+    this.initialCameraUp = this.camera.up.clone();
+    this.targetCameraPosition = this.camera.position.clone();
+    this._targetCameraUp = this.initialCameraUp.clone();
 
-    // Two-hand anchors (Deterministic ratio-based scaling & 3D rotation)
+    // Gesture anchors preserve the current transform when a mode changes.
     this.isTwoHandActive = false;
-    this.anchorTwoHandDist = null;
-    this.anchorTwoHandAngle = null;
-    this.anchorTwoHandYaw = null;
-    this.anchorTwoHandPitch = null;
-    this.anchorTwoHandZ = null;
-    this.anchorTwoHandAvgX = null;
-    this.anchorTwoHandModelScale = 1.0;
-    this.anchorTwoHandModelRot = new THREE.Euler();
-    this.anchorTwoHandModelPos = new THREE.Vector3();
+    this.gripController = new GripInteractionController();
+    this.grabbedHands = [];
+    this.singleHandAnchor = null;
+    this.twoHandAnchor = null;
+    this.handRayHits = { Left: null, Right: null };
+    this.interactionDiagnostics = {
+      interactionMode: 'idle',
+      grabbedHands: [],
+      states: this.gripController.getDiagnostics(),
+      events: [],
+      updateMs: 0,
+      deltaTime: 0,
+      fps: 0
+    };
     this.rayMat = null;
     this.reticleMat = null;
 
@@ -157,6 +169,7 @@ export class Air3DStudio {
     if (!active) {
       this.laserBeam.visible = false;
       this.reticle.visible = false;
+      this._cancelGripInteraction('studio-closed');
     }
   }
 
@@ -356,15 +369,15 @@ export class Air3DStudio {
 
   // --- AUTO-CENTERING & NORMALIZATION ---
   _installLoadedModel(model) {
-    this.modelContainer.add(model);
-
-    // Compute bounding box
-    const box = new THREE.Box3().setFromObject(this.modelContainer);
+    // Center from the loaded model's own bounds, not from a previously transformed container.
+    model.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(model);
     const center = new THREE.Vector3();
     box.getCenter(center);
 
-    // Center model at container origin
+    // Center the geometry around its pivot before it enters the transformed container.
     model.position.sub(center);
+    this.modelContainer.add(model);
 
     // Compute dimensions and normalize scale to fit comfortably in holographic stage (~1.6 units)
     const size = new THREE.Vector3();
@@ -373,6 +386,7 @@ export class Air3DStudio {
     const maxDim = Math.max(size.x, size.y, size.z, 0.001);
     const targetScale = 1.6 / maxDim;
     this.modelContainer.scale.setScalar(targetScale);
+    this.baseModelScale = targetScale;
 
     // Count vertices & triangles
     let totalVerts = 0;
@@ -396,14 +410,22 @@ export class Air3DStudio {
 
     // Reset transformations
     this.modelContainer.position.set(0, 0, 0);
-    this.modelContainer.rotation.set(0, 0, 0);
+    this.modelContainer.quaternion.identity();
     this.targetPosition.set(0, 0, 0);
-    this.targetRotation.set(0, 0, 0);
+    this.targetQuaternion.identity();
     this.targetScale = targetScale;
     this.isGrabbing = false;
-    this.grabAnchorHand = null;
-    this.grabAnchorHandAngles = null;
     this.isTwoHandActive = false;
+    this.interactionMode = 'idle';
+    this.isHoveringModel = false;
+    this.gripController.reset();
+    this.grabbedHands = [];
+    this.singleHandAnchor = null;
+    this.twoHandAnchor = null;
+    this.rotationHand = null;
+    this.rotationAnchor = null;
+    this.rotationGestureCandidates.clear();
+    this.currentControlMode = 'idle';
 
     // Update Bounding Box Wireframe
     this.boxHelper.update();
@@ -469,355 +491,437 @@ export class Air3DStudio {
   }
 
   resetTransform() {
-    const s = this.modelMetadata.scale || 1.0;
+    const s = this.baseModelScale || 1.0;
     this.targetPosition.set(0, 0, 0);
-    this.targetRotation.set(0, 0, 0);
+    this.targetQuaternion.identity();
     this.targetScale = s;
+    this.modelMetadata.scale = Math.round(s * 100) / 100;
     this.modelContainer.position.set(0, 0, 0);
-    this.modelContainer.rotation.set(0, 0, 0);
+    this.modelContainer.quaternion.identity();
     this.modelContainer.scale.setScalar(s);
     this.isGrabbing = false;
-    this.grabAnchorHand = null;
-    this.grabAnchorHandAngles = null;
     this.isTwoHandActive = false;
+    this.interactionMode = 'idle';
+    this.currentPoseLabel = 'LIBRE';
+    this.isHoveringModel = false;
+    this.gripController.reset();
+    this.grabbedHands = [];
+    this.singleHandAnchor = null;
+    this.twoHandAnchor = null;
+    this.rotationHand = null;
+    this.rotationAnchor = null;
+    this.rotationGestureCandidates.clear();
+    this.currentControlMode = 'idle';
+    this.targetCameraPosition.copy(this.initialCameraPosition);
+    this.camera.position.copy(this.initialCameraPosition);
+    this.camera.up.copy(this.initialCameraUp);
+    this._targetCameraUp.copy(this.initialCameraUp);
+    this.camera.lookAt(0, 0, 0);
     this.setExplodedView(0);
     this.boxHelper.update();
+    this.onMetadataUpdate?.(this.modelMetadata);
   }
 
-  // --- TONY STARK SPATIAL GESTURE DRIVER ---
-  update(kinematicData) {
+  // --- PINCH-CONFIRMED SPATIAL INTERACTION ---
+  update(kinematicData, stats = {}) {
     if (!this.isActive) return;
+    const frameStarted = performance.now();
 
-    // Gentle idle rotation if enabled and not grabbing/interacting
-    if (this.autoRotate && !this.isGrabbing && !this.isTwoHandActive) {
-      this.targetRotation.y += 0.008;
-      this.pedestalRing.rotation.z += 0.005;
-      this.pedestalInnerRing.rotation.z -= 0.007;
-    }
+    const hands = {
+      Left: kinematicData?.Left || null,
+      Right: kinematicData?.Right || null
+    };
+    this._lastHands = hands;
+    const canGrab = {
+      Left: this._updateHandTarget(hands.Left, 'Left'),
+      Right: this._updateHandTarget(hands.Right, 'Right')
+    };
+    const hoverSide = canGrab.Right ? 'Right' : canGrab.Left ? 'Left' : null;
+    this.isHoveringModel = Boolean(hoverSide);
+    const result = this.gripController.update(
+      hands,
+      kinematicData?.timestamp ?? frameStarted,
+      canGrab
+    );
+    const activeHands = result.grabbedHands;
+    const mode = result.interactionMode;
+    const timestamp = kinematicData?.timestamp ?? frameStarted;
+    if (activeHands.length !== 1) this.rotationGestureCandidates.clear();
+    const rotationHand = activeHands.length === 1
+      ? this._getRotationGestureHand(hands, activeHands, timestamp)
+      : null;
+    const canTransform = activeHands.every((side) => this.gripController.isTransforming(side));
+    const reacquiredHands = result.events
+      .filter((event) => event.type === 'reacquired')
+      .map((event) => event.hand)
+      .filter((side) => activeHands.includes(side));
 
-    const { Left, Right } = kinematicData;
+    if (
+      mode !== this.interactionMode ||
+      !this._sameHands(activeHands, this.grabbedHands) ||
+      reacquiredHands.length > 0 ||
+      rotationHand !== this.rotationHand
+    ) {
+      this.grabbedHands = activeHands;
+      this.interactionMode = mode;
+      this.isGrabbing = activeHands.length > 0;
+      this.isTwoHandActive = activeHands.length === 2;
+      this.singleHandAnchor = null;
+      this.twoHandAnchor = null;
+      this.rotationHand = rotationHand;
+      this.rotationAnchor = null;
 
-    // 1. DUAL-HAND INTERACTION (Two-Hand Scale & 3D Orbital Rotation)
-    if (Left && Right) {
-      // Disengage single-hand grabbing cleanly to avoid stale anchor snaps
-      if (this.isGrabbing) {
-        this.isGrabbing = false;
-        this.grabAnchorHand = null;
-        this.grabAnchorHandAngles = null;
-      }
-      this._handleTwoHandInteraction(Left, Right);
-      this.laserBeam.visible = false;
-      this.reticle.visible = false;
-    } else {
-      // Cleanly reset two-hand interaction anchors when exiting dual-hand mode
-      this.isTwoHandActive = false;
-      this.anchorTwoHandDist = null;
-      this.anchorTwoHandAngle = null;
-      this.anchorTwoHandYaw = null;
-      this.anchorTwoHandPitch = null;
-      this.anchorTwoHandZ = null;
-      this.anchorTwoHandAvgX = null;
-
-      // 2. SINGLE HAND INTERACTION (Raycasting, Proximity, Pinch Grab & Translate)
-      const primaryHand = Right || Left;
-      if (primaryHand) {
-        this._handleSingleHandInteraction(primaryHand);
+      if (activeHands.length === 1) {
+        if (rotationHand) {
+          this._anchorRotationHand(rotationHand, hands[rotationHand]);
+          this.currentControlMode = 'rotate';
+        } else {
+          this._anchorSingleHand(activeHands[0], hands[activeHands[0]]);
+          this.currentControlMode = 'translate';
+        }
+      } else if (activeHands.length === 2) {
+        this._anchorTwoHands(hands.Left, hands.Right);
+        this.currentControlMode = this.bimanualMode;
       } else {
-        this.isGrabbing = false;
-        this.grabAnchorHand = null;
-        this.grabAnchorHandAngles = null;
-        this.laserBeam.visible = false;
-        this.reticle.visible = false;
+        this.currentControlMode = 'idle';
       }
     }
 
-    // 3. Smooth Damping (Lerp) towards Target Transformations
-    // Eliminates micro-tremors and guarantees smooth grab/release transitions
-    this.modelContainer.position.lerp(this.targetPosition, 0.35);
+    this._updateHoverVisual(hoverSide ? this.handRayHits[hoverSide] : null);
+    if (canTransform && activeHands.length === 1 && rotationHand) {
+      const hand = hands[rotationHand];
+      if (hand && this.rotationAnchor) this._applyRotationGesture(rotationHand, hand);
+    } else if (canTransform && activeHands.length === 1) {
+      const side = activeHands[0];
+      if (hands[side] && this.singleHandAnchor) {
+        this._applySingleHandTransform(side, hands[side]);
+      }
+    } else if (
+      canTransform &&
+      activeHands.length === 2 &&
+      hands.Left &&
+      hands.Right &&
+      this.twoHandAnchor
+    ) {
+      this._applyTwoHandTransform(hands.Left, hands.Right);
+    }
+    if (this.autoRotate && !this.isGrabbing) {
+      const dtSeconds = Math.min(result.deltaTime, 50) / 1000;
+      this.targetQuaternion.premultiply(
+        new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0.48 * dtSeconds)
+      );
+      this.pedestalRing.rotation.z += 0.3 * dtSeconds;
+      this.pedestalInnerRing.rotation.z -= 0.42 * dtSeconds;
+    }
 
-    // Smooth rotation damping
-    this.modelContainer.rotation.x += (this.targetRotation.x - this.modelContainer.rotation.x) * 0.35;
-    this.modelContainer.rotation.y += (this.targetRotation.y - this.modelContainer.rotation.y) * 0.35;
-    this.modelContainer.rotation.z += (this.targetRotation.z - this.modelContainer.rotation.z) * 0.35;
-
-    // Smooth scale damping
-    const currentScale = this.modelContainer.scale.x;
-    const nextScale = currentScale + (this.targetScale - currentScale) * 0.35;
-    this.modelContainer.scale.setScalar(nextScale);
-
+    this._dampModelTransform(result.deltaTime);
     this.boxHelper.update();
+    this.interactionDiagnostics = {
+      interactionMode: mode,
+      controlMode: this.currentControlMode,
+      rotationTarget: this.rotationTarget,
+      bimanualMode: this.bimanualMode,
+      grabbedHands: [...activeHands],
+      states: result.states,
+      events: result.events,
+      updateMs: performance.now() - frameStarted,
+      deltaTime: result.deltaTime,
+      fps: stats?.fps || 0,
+      frameTimeMs: stats?.frameTimeMs || 0
+    };
+
+    const states = ['Left', 'Right']
+      .map((side) => `${side[0]}:${result.states[side].state}`)
+      .join(' · ');
+    const gripOwner = activeHands.length ? activeHands.join('+') : 'ninguna';
+    const targetLabel = this.rotationTarget === 'camera' ? 'órbita cámara' : 'objeto';
+    const controlLabel = this.currentControlMode === 'rotate'
+      ? `rotar ${targetLabel}`
+      : this.currentControlMode === 'combined'
+        ? `escala + rotación ${targetLabel}`
+        : this.currentControlMode === 'scale'
+          ? 'escalar'
+          : this.currentControlMode === 'translate'
+            ? 'trasladar'
+            : 'libre';
+    this.currentPoseLabel = `${controlLabel} · agarre: ${gripOwner}`;
   }
 
-  _handleSingleHandInteraction(hand) {
-    const rawTip = hand.points && hand.points[8];
-    const rawWrist = hand.points && hand.points[0];
-    const palm = hand.palm;
-    const pose = hand.pose;
-    if (!rawTip || !rawWrist || !palm || !pose) return;
+  _updateHandTarget(hand, side) {
+    if (!hand?.points?.[0] || !hand.points?.[8] || !hand.worldPoints?.[0] || !hand.tipWorld) {
+      this.handRayHits[side] = null;
+      return false;
+    }
 
-    // Use true 3D world positions from visualizer matching screen projection
-    const tip = hand.tipWorld || (hand.worldPoints ? hand.worldPoints[8] : new THREE.Vector3(rawTip.x, rawTip.y, rawTip.z));
-    const wrist = hand.worldPoints ? hand.worldPoints[0] : new THREE.Vector3(rawWrist.x, rawWrist.y, rawWrist.z);
-    const palmPos = hand.palmWorld || (palm ? new THREE.Vector3(palm.position.x, palm.position.y, palm.position.z) : tip);
-
-    // Forward pointing ray from finger into the holographic space (-Z direction)
-    const dir = new THREE.Vector3(
+    const tip = hand.tipWorld;
+    const wrist = hand.worldPoints[0];
+    const direction = new THREE.Vector3(
       tip.x - wrist.x,
       tip.y - wrist.y,
       -Math.max(0.4, Math.abs(tip.z - wrist.z))
     ).normalize();
 
-    this.laserBeam.position.copy(tip);
-    this.laserBeam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
-
-    // Hide laser during full hand gestures (fist, open palm) for clean immersion
-    const hideLaser = pose.isFist || pose.isOpenPalm;
-    this.laserBeam.visible = !hideLaser;
-
-    // Raycast intersection test with 3D model
-    this.raycaster.set(tip, dir);
+    this.studioGroup.updateMatrixWorld(true);
+    this.camera.updateMatrixWorld();
+    this.raycaster.set(tip, direction);
     const intersects = this.raycaster.intersectObjects(this.modelContainer.children, true);
+    const hit = intersects[0];
 
-    const distToModel = tip.distanceTo(this.modelContainer.position);
-    const palmDistToModel = palmPos.distanceTo(this.modelContainer.position);
-    const isCloseProximity = distToModel < 1.6 || palmDistToModel < 1.8;
+    this.handRayHits[side] = hit
+      ? { tip: tip.clone(), direction, hit }
+      : null;
+    return Boolean(hit);
+  }
 
-    if (intersects.length > 0) {
-      const hit = intersects[0];
-      this.reticle.position.copy(hit.point);
-      this.reticle.lookAt(this.camera.position);
-      this.reticle.visible = !hideLaser;
-      this.laserBeam.scale.set(1, 1, hit.distance);
-      this.isHoveringModel = true;
-    } else {
+  _updateHoverVisual(target) {
+    if (!target || this.isGrabbing) {
+      this.laserBeam.visible = false;
       this.reticle.visible = false;
-      this.laserBeam.scale.set(1, 1, 2.5);
-      this.isHoveringModel = isCloseProximity;
-    }
-
-    // =========================================================================
-    // NATURAL POSE MATRIX - ABSOLUTE DIRECT 3D SPATIAL CONTROL
-    // =========================================================================
-
-    // 1. GESTURE: POWER GRAB (FIST / PUÑO CERRADO)
-    // Clenching all fingers into a fist grabs the model firmly with 6-DOF direct control
-    if (pose.isFist) {
-      if (this.interactionMode !== 'fist_grab') {
-        if (this.isHoveringModel || this.isGrabbing) {
-          this.interactionMode = 'fist_grab';
-          this.isGrabbing = true;
-          this.grabAnchorPalm = palmPos.clone();
-          this.grabAnchorModelPos = this.targetPosition.clone();
-          this.grabAnchorModelRot = this.targetRotation.clone();
-          this.grabAnchorPalmAngles = { ...palm.orientation };
-          this.currentPoseLabel = '✊ PUÑO (AGARRE TOTAL)';
-          if (this.rayMat) this.rayMat.color.setHex(0x10b981);
-        }
-      } else {
-        // Direct 6-DOF follow: Position
-        const dx = (palmPos.x - this.grabAnchorPalm.x) * 1.5;
-        const dy = (palmPos.y - this.grabAnchorPalm.y) * 1.5;
-        const dz = (palmPos.z - this.grabAnchorPalm.z) * 2.2;
-
-        this.targetPosition.set(
-          this.grabAnchorModelPos.x + dx,
-          this.grabAnchorModelPos.y + dy,
-          Math.max(-3.5, Math.min(2.0, this.grabAnchorModelPos.z + dz))
-        );
-
-        // Direct 6-DOF follow: Orientation from palm roll/pitch/yaw
-        if (palm.orientation && this.grabAnchorPalmAngles) {
-          const dRoll = palm.orientation.roll - this.grabAnchorPalmAngles.roll;
-          const dPitch = palm.orientation.pitch - this.grabAnchorPalmAngles.pitch;
-          const dYaw = palm.orientation.yaw - this.grabAnchorPalmAngles.yaw;
-
-          this.targetRotation.z = this.grabAnchorModelRot.z - THREE.MathUtils.degToRad(dRoll);
-          this.targetRotation.x = this.grabAnchorModelRot.x - THREE.MathUtils.degToRad(dPitch);
-          this.targetRotation.y = this.grabAnchorModelRot.y - THREE.MathUtils.degToRad(dYaw);
-        }
-      }
       return;
     }
+    this.laserBeam.position.copy(target.tip);
+    this.laserBeam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), target.direction);
+    this.laserBeam.scale.set(1, 1, target.hit.distance);
+    this.laserBeam.visible = true;
+    this.reticle.position.copy(target.hit.point);
+    this.reticle.lookAt(this.camera.position);
+    this.reticle.visible = true;
+  }
 
-    // 2. GESTURE: PALM LEVITATION (PALMA ABIERTA HACIA ARRIBA)
-    // Holding an open palm facing upward causes the 3D model to levitate smoothly directly above your hand
-    const isPalmUp = pose.isOpenPalm && palm.normal.y > 0.40;
-    if (isPalmUp) {
-      this.interactionMode = 'palm_levitate';
-      this.isGrabbing = true;
-      this.currentPoseLabel = '✋ LEVITANDO EN PALMA';
+  _anchorSingleHand(side, hand) {
+    const point = hand?.tipWorld;
+    if (!point) return;
+    this.singleHandAnchor = {
+      side,
+      handPoint: point.clone(),
+      modelPosition: this.targetPosition.clone()
+    };
+    this.currentPoseLabel = `${side}: agarre confirmado`;
+  }
 
-      // Hover directly above the palm center with a dynamic subtle float
-      const hoverHeight = 0.45;
-      const hoverFloat = Math.sin(performance.now() * 0.003) * 0.02;
-      const targetZ = -(palmPos.z) * 1.8;
+  _applySingleHandTransform(side, hand) {
+    if (side !== this.singleHandAnchor.side || !hand.tipWorld) return;
+    const anchor = this.singleHandAnchor;
+    const delta = hand.tipWorld.clone().sub(anchor.handPoint);
+    this.targetPosition.set(
+      anchor.modelPosition.x + delta.x * 1.5,
+      anchor.modelPosition.y + delta.y * 1.5,
+      THREE.MathUtils.clamp(anchor.modelPosition.z + delta.z * 0.45, -3.5, 2)
+    );
+  }
 
-      this.targetPosition.set(
-        palmPos.x,
-        palmPos.y + hoverHeight + hoverFloat,
-        Math.max(-3.0, Math.min(1.5, targetZ))
+  _anchorRotationHand(side, hand) {
+    if (!hand?.tipWorld) return;
+    this.rotationAnchor = {
+      side,
+      handPoint: hand.tipWorld.clone(),
+      modelQuaternion: this.targetQuaternion.clone(),
+      cameraPosition: this.targetCameraPosition.clone(),
+      cameraUp: this._targetCameraUp.clone(),
+      cameraCenter: this.targetPosition.clone()
+    };
+  }
+
+  _applyRotationGesture(side, hand) {
+    if (
+      side !== this.rotationAnchor?.side ||
+      !hand.tipWorld ||
+      !this._isRotationGesture(hand)
+    ) return;
+    const delta = hand.tipWorld.clone().sub(this.rotationAnchor.handPoint);
+    const rotationDelta = new THREE.Quaternion().setFromEuler(
+      new THREE.Euler(-delta.y * 2.4, delta.x * 2.4, delta.z * 2.4, 'XYZ')
+    );
+    this._applyRotationDelta(rotationDelta, this.rotationAnchor.modelQuaternion, this.rotationAnchor);
+  }
+
+  _anchorTwoHands(leftHand, rightHand) {
+    if (!leftHand?.tipWorld || !rightHand?.tipWorld) return;
+    const left = leftHand.tipWorld;
+    const right = rightHand.tipWorld;
+    const vector = right.clone().sub(left);
+    this.twoHandAnchor = {
+      center: left.clone().add(right).multiplyScalar(0.5),
+      vector,
+      distance: Math.max(0.04, vector.length()),
+      leftPalm: this._palmQuaternion(leftHand),
+      rightPalm: this._palmQuaternion(rightHand),
+      modelPosition: this.targetPosition.clone(),
+      modelQuaternion: this.targetQuaternion.clone(),
+      modelScale: this.targetScale,
+      cameraPosition: this.targetCameraPosition.clone(),
+      cameraUp: this._targetCameraUp.clone(),
+      cameraCenter: this.targetPosition.clone()
+    };
+  }
+
+  _applyTwoHandTransform(leftHand, rightHand) {
+    const left = leftHand.tipWorld;
+    const right = rightHand.tipWorld;
+    const vector = right.clone().sub(left);
+    const center = left.clone().add(right).multiplyScalar(0.5);
+    const distance = Math.max(0.04, vector.length());
+    const anchor = this.twoHandAnchor;
+    const ratio = THREE.MathUtils.clamp(distance / anchor.distance, 0.25, 4);
+    const minimumScale = Math.max(0.001, anchor.modelScale * 0.25);
+    const maximumScale = Math.max(minimumScale, anchor.modelScale * 4);
+
+    if (this.bimanualMode !== 'rotate') {
+      this.targetScale = THREE.MathUtils.clamp(anchor.modelScale * ratio, minimumScale, maximumScale);
+    }
+    this.targetPosition.x = anchor.modelPosition.x + (center.x - anchor.center.x) * 1.5;
+    this.targetPosition.y = anchor.modelPosition.y + (center.y - anchor.center.y) * 1.5;
+    this.targetPosition.z = THREE.MathUtils.clamp(
+      anchor.modelPosition.z + (center.z - anchor.center.z) * 0.25,
+      -3.5,
+      2
+    );
+    if (this.bimanualMode !== 'scale') {
+      const swing = new THREE.Quaternion().setFromUnitVectors(
+        anchor.vector.clone().normalize(),
+        vector.clone().normalize()
       );
+      const leftDelta = this._palmQuaternion(leftHand).multiply(anchor.leftPalm.clone().invert());
+      const rightDelta = this._palmQuaternion(rightHand).multiply(anchor.rightPalm.clone().invert());
+      const palmDelta = leftDelta.slerp(rightDelta, 0.5);
+      this._applyRotationDelta(
+        palmDelta.multiply(swing),
+        anchor.modelQuaternion,
+        anchor
+      );
+    }
+    this.modelMetadata.scale = Math.round(this.targetScale * 100) / 100;
+    this.onMetadataUpdate?.(this.modelMetadata);
+  }
 
-      // Subtle tilt mirroring palm orientation
-      if (palm.orientation) {
-        this.targetRotation.z = -THREE.MathUtils.degToRad(palm.orientation.roll * 0.4);
-        this.targetRotation.x = -THREE.MathUtils.degToRad(palm.orientation.pitch * 0.4);
+  _applyRotationDelta(delta, modelQuaternion, anchor) {
+    if (this.rotationTarget === 'camera') {
+      const offset = anchor.cameraPosition.clone().sub(anchor.cameraCenter);
+      this.targetCameraPosition.copy(offset.applyQuaternion(delta).add(anchor.cameraCenter));
+      this._targetCameraUp = anchor.cameraUp.clone().applyQuaternion(delta).normalize();
+      return;
+    }
+    this.targetQuaternion.copy(modelQuaternion).premultiply(delta).normalize();
+  }
+
+  _palmQuaternion(hand) {
+    const orientation = hand?.palm?.orientation || {};
+    const toRadians = THREE.MathUtils.degToRad;
+    return new THREE.Quaternion().setFromEuler(new THREE.Euler(
+      toRadians(orientation.pitch || 0),
+      toRadians(orientation.yaw || 0),
+      toRadians(orientation.roll || 0),
+      'YXZ'
+    ));
+  }
+
+  _isRotationGesture(hand) {
+    return Boolean(
+      hand?.pose?.isPeace &&
+      Number.isFinite(hand.confidence) &&
+      hand.confidence >= 0.65
+    );
+  }
+
+  _getRotationGestureHand(hands, grabbedHands, timestamp) {
+    let activeSide = null;
+    for (const side of ['Left', 'Right']) {
+      if (grabbedHands.includes(side)) {
+        this.rotationGestureCandidates.delete(side);
+        continue;
       }
-      return;
-    }
-
-    // 3. GESTURE: STOP / FREEZE (PALMA ABIERTA DE FRENTE A LA CÁMARA)
-    // Showing an open stop-palm locks the model in space and freezes auto-rotation
-    const isStopPalm = pose.isOpenPalm && palm.isFacingCamera;
-    if (isStopPalm) {
-      this.interactionMode = 'palm_freeze';
-      this.isGrabbing = false;
-      this.currentPoseLabel = '🛑 ANCLADO / FRENO';
-      this.targetPosition.copy(this.modelContainer.position);
-      this.targetRotation.copy(this.modelContainer.rotation);
-      return;
-    }
-
-    // 4. GESTURE: SCISSORS / PEACE (DESPIECE HOLOGRÁFICO)
-    // Index + Middle extended (Peace / Scissors) controls Exploded View by spreading or closing the two fingers
-    if (pose.isPeace) {
-      this.interactionMode = 'peace_explode';
-      this.currentPoseLabel = '✌️ DESPIECE CON DOS DEDOS';
-
-      const tipIndex = hand.points[8];
-      const tipMiddle = hand.points[12];
-      if (tipIndex && tipMiddle) {
-        const fingerDist = Math.hypot(tipIndex.x - tipMiddle.x, tipIndex.y - tipMiddle.y);
-        // Finger spread between 0.04 (closed) and 0.16 (wide open scissors) maps to 0% - 100% exploded factor
-        const explodeFactor = Math.max(0, Math.min(1, (fingerDist - 0.04) / 0.12));
-        this.setExplodedView(explodeFactor);
-
-        const slider = document.getElementById('slider-exploded');
-        const lbl = document.getElementById('lbl-exploded-pct');
-        if (slider) slider.value = explodeFactor;
-        if (lbl) lbl.textContent = `${Math.round(explodeFactor * 100)}%`;
+      const hand = hands[side];
+      if (!this._isRotationGesture(hand)) {
+        this.rotationGestureCandidates.delete(side);
+        continue;
       }
-      return;
-    }
-
-    // 5. GESTURE: PRECISION PINCH (PULGAR + ÍNDICE)
-    // Fine pinch for surgical precision positioning
-    if (pose.isPinchThumbIndex) {
-      if (this.interactionMode !== 'fine_pinch') {
-        if (this.isHoveringModel || this.isGrabbing) {
-          this.interactionMode = 'fine_pinch';
-          this.isGrabbing = true;
-          this.grabAnchorHand = tip.clone();
-          this.grabAnchorModelPos = this.targetPosition.clone();
-          this.grabAnchorModelRot = this.targetRotation.clone();
-          this.grabAnchorHandAngles = { ...hand.angles };
-          this.currentPoseLabel = '🤏 PINZA (AJUSTE FINO)';
-          if (this.rayMat) this.rayMat.color.setHex(0x10b981);
-          if (this.reticleMat) this.reticleMat.color.setHex(0x10b981);
-        }
-      } else {
-        const deltaX = (tip.x - this.grabAnchorHand.x) * 1.5;
-        const deltaY = (tip.y - this.grabAnchorHand.y) * 1.5;
-        const deltaZ = (tip.z - this.grabAnchorHand.z) * 2.2;
-
-        this.targetPosition.set(
-          this.grabAnchorModelPos.x + deltaX,
-          this.grabAnchorModelPos.y + deltaY,
-          Math.max(-3.5, Math.min(2.0, this.grabAnchorModelPos.z + deltaZ))
-        );
-
-        if (hand.angles && this.grabAnchorHandAngles) {
-          const dRoll = (hand.angles.roll || 0) - this.grabAnchorHandAngles.roll;
-          const dPitch = (hand.angles.pitch || 0) - this.grabAnchorHandAngles.pitch;
-          const deadzone = 8;
-          if (Math.abs(dRoll) > deadzone) {
-            this.targetRotation.z = this.grabAnchorModelRot.z - THREE.MathUtils.degToRad(dRoll - Math.sign(dRoll) * deadzone);
-          }
-          if (Math.abs(dPitch) > deadzone) {
-            this.targetRotation.x = this.grabAnchorModelRot.x - THREE.MathUtils.degToRad(dPitch - Math.sign(dPitch) * deadzone);
-          }
-        }
+      const startedAt = this.rotationGestureCandidates.get(side) ?? timestamp;
+      this.rotationGestureCandidates.set(side, startedAt);
+      if (timestamp - startedAt >= this.rotationGestureHoldMs && activeSide === null) {
+        activeSide = side;
       }
-      return;
     }
+    return activeSide;
+  }
 
-    // 6. NO ACTIVE GESTURE / RELEASED
-    if (this.isGrabbing) {
-      this.isGrabbing = false;
-      this.grabAnchorHand = null;
-      this.grabAnchorPalm = null;
-      this.grabAnchorHandAngles = null;
-      this.grabAnchorPalmAngles = null;
+  setBimanualMode(mode) {
+    if (!['combined', 'scale', 'rotate'].includes(mode)) {
+      throw new RangeError(`Unknown bimanual transform mode: ${mode}`);
     }
+    if (mode === this.bimanualMode) return;
+    this.bimanualMode = mode;
+    if (this.grabbedHands.length === 2) {
+      this._anchorTwoHands(
+        this._lastHands?.Left,
+        this._lastHands?.Right
+      );
+      this.currentControlMode = mode;
+    }
+  }
+
+  setRotationTarget(target) {
+    if (!['object', 'camera'].includes(target)) {
+      throw new RangeError(`Unknown rotation target: ${target}`);
+    }
+    if (target === this.rotationTarget) return;
+    this.rotationTarget = target;
+    if (this.rotationHand) {
+      this._anchorRotationHand(this.rotationHand, this._lastHands?.[this.rotationHand]);
+    } else if (this.grabbedHands.length === 2) {
+      this._anchorTwoHands(this._lastHands?.Left, this._lastHands?.Right);
+    }
+  }
+
+  _dampModelTransform(deltaTime) {
+    const elapsed = Math.max(0, Math.min(deltaTime, 50));
+    const alpha = 1 - Math.exp(-elapsed / 32);
+    this.modelContainer.position.lerp(this.targetPosition, alpha);
+    this.modelContainer.quaternion.slerp(this.targetQuaternion, alpha);
+    const nextScale = this.modelContainer.scale.x +
+      (this.targetScale - this.modelContainer.scale.x) * alpha;
+    this.modelContainer.scale.setScalar(nextScale);
+    this.camera.position.lerp(this.targetCameraPosition, alpha);
+    if (
+      this.rotationTarget === 'camera' &&
+      this.isGrabbing &&
+      ['rotate', 'combined'].includes(this.currentControlMode)
+    ) {
+      const center = this.modelContainer.getWorldPosition(new THREE.Vector3());
+      if (this._targetCameraUp) this.camera.up.lerp(this._targetCameraUp, alpha).normalize();
+      this.camera.lookAt(center);
+    }
+  }
+
+  _sameHands(first, second) {
+    return first.length === second.length && first.every((side, index) => side === second[index]);
+  }
+
+  _cancelGripInteraction(reason) {
+    this.gripController.reset();
+    this.grabbedHands = [];
+    this.singleHandAnchor = null;
+    this.twoHandAnchor = null;
+    this.rotationHand = null;
+    this.rotationAnchor = null;
+    this.rotationGestureCandidates.clear();
+    this.isGrabbing = false;
+    this.isTwoHandActive = false;
     this.interactionMode = 'idle';
-    this.currentPoseLabel = 'LIBRE';
-    if (this.rayMat) this.rayMat.color.setHex(0x00f5d4);
-    if (this.reticleMat) this.reticleMat.color.setHex(0x00f5d4);
+    this.currentControlMode = 'idle';
+    this.isHoveringModel = false;
+    this.interactionDiagnostics = {
+      ...this.interactionDiagnostics,
+      interactionMode: 'idle',
+      controlMode: 'idle',
+      grabbedHands: [],
+      states: this.gripController.getDiagnostics(),
+      events: [{ type: 'release', reason }]
+    };
   }
 
-  _handleTwoHandInteraction(leftHand, rightHand) {
-    this.currentPoseLabel = '✋✋ CONTROL BIMANUAL';
-
-    const leftRaw = leftHand.points && leftHand.points[8] ? leftHand.points[8] : leftHand.palm.center;
-    const rightRaw = rightHand.points && rightHand.points[8] ? rightHand.points[8] : rightHand.palm.center;
-    if (!leftRaw || !rightRaw) return;
-
-    const leftTip = leftHand.tipWorld || (leftHand.worldPoints ? leftHand.worldPoints[8] : new THREE.Vector3(leftRaw.x, leftRaw.y, leftRaw.z));
-    const rightTip = rightHand.tipWorld || (rightHand.worldPoints ? rightHand.worldPoints[8] : new THREE.Vector3(rightRaw.x, rightRaw.y, rightRaw.z));
-
-    const dx = rightTip.x - leftTip.x;
-    const dy = rightTip.y - leftTip.y;
-    const dz = rightTip.z - leftTip.z; // differential depth
-
-    const currentDist = Math.hypot(dx, dy);
-    const currentAngle = Math.atan2(dy, dx);
-    const currentAvgZ = (leftTip.z + rightTip.z) / 2;
-    const currentAvgY = (leftTip.y + rightTip.y) / 2;
-    const currentAvgX = (leftTip.x + rightTip.x) / 2;
-
-    if (!this.isTwoHandActive) {
-      // Initialize two-hand anchor
-      this.isTwoHandActive = true;
-      this.anchorTwoHandDist = Math.max(0.08, currentDist);
-      this.anchorTwoHandAngle = currentAngle;
-      this.anchorTwoHandYaw = dz;
-      this.anchorTwoHandPitch = currentAvgY;
-      this.anchorTwoHandZ = currentAvgZ;
-      this.anchorTwoHandAvgX = currentAvgX;
-      this.anchorTwoHandModelScale = this.targetScale;
-      this.anchorTwoHandModelRot = this.targetRotation.clone();
-      this.anchorTwoHandModelPos = this.targetPosition.clone();
-    } else {
-      // 1. Two-Hand Deterministic Scaling (Ratio-based, zero accumulation drift)
-      const distRatio = currentDist / this.anchorTwoHandDist;
-      const newScale = Math.max(0.15, Math.min(6.0, this.anchorTwoHandModelScale * distRatio));
-      this.targetScale = newScale;
-      this.modelMetadata.scale = Math.round(newScale * 100) / 100;
-      if (this.onMetadataUpdate) this.onMetadataUpdate(this.modelMetadata);
-
-      // 2. Two-Hand Roll Rotation (Steering wheel Z-axis)
-      let angleDelta = currentAngle - this.anchorTwoHandAngle;
-      while (angleDelta > Math.PI) angleDelta -= Math.PI * 2;
-      while (angleDelta < -Math.PI) angleDelta += Math.PI * 2;
-      this.targetRotation.z = this.anchorTwoHandModelRot.z + angleDelta * 1.2;
-
-      // 3. Two-Hand 360° Yaw Rotation (Differential depth around Y-axis)
-      // Pushing right hand forward & left hand back rotates model smoothly around vertical axis
-      const yawDelta = (dz - this.anchorTwoHandYaw) * 3.5;
-      this.targetRotation.y = this.anchorTwoHandModelRot.y - yawDelta;
-
-      // 4. Two-Hand Pitch Rotation (Vertical tilt around X-axis)
-      const pitchDelta = (currentAvgY - this.anchorTwoHandPitch) * 2.0;
-      this.targetRotation.x = this.anchorTwoHandModelRot.x - pitchDelta;
-
-      // 5. Dual-Hand Depth Translation (Z-axis push/pull)
-      // Pushing hands toward camera pushes model deeper into scene (-Z); pulling toward body brings model towards user (+Z)
-      const zDelta = (currentAvgZ - this.anchorTwoHandZ) * 2.2;
-      this.targetPosition.z = Math.max(-3.5, Math.min(2.0, this.anchorTwoHandModelPos.z + zDelta));
-
-      // 6. Dual-Hand Lateral Translation (X-axis)
-      const xDelta = (currentAvgX - this.anchorTwoHandAvgX) * 1.5;
-      this.targetPosition.x = this.anchorTwoHandModelPos.x + xDelta;
-    }
+  getInteractionDiagnostics() {
+    return this.interactionDiagnostics;
   }
+
+
 }

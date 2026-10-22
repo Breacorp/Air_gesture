@@ -51,16 +51,20 @@ export class FaceTracker {
       return true;
     } catch (err) {
       this.isInitializing = false;
-      console.warn('[FaceTracker] Initialization failed, will use geometric fallback:', err);
+      console.warn('[FaceTracker] Initialization failed; face tracking remains disabled:', err);
       return false;
     }
   }
 
-  enable() {
-    this.enabled = true;
-    if (!this.isInitialized && !this.isInitializing) {
-      this.initialize().catch(console.error);
+  async enable() {
+    if (!this.isInitialized) {
+      const initialized = await this.initialize();
+      if (!initialized) {
+        throw new Error('No se pudo inicializar el seguimiento facial local.');
+      }
     }
+    this.enabled = true;
+    return true;
   }
 
   disable() {

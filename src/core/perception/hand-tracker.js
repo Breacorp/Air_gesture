@@ -13,33 +13,48 @@ export class HandTracker {
     this.mirror = options.mirror !== undefined ? options.mirror : true;
     this.swapHands = options.swapHands || false;
     this.numHands = options.numHands || 2;
+    this._initializationPromise = null;
   }
 
   /**
    * Initializes MediaPipe HandLandmarker using bundled local assets.
    */
   async initialize() {
-    try {
-      const vision = await FilesetResolver.forVisionTasks('/wasm');
+    if (this.handLandmarker) return true;
+    if (this._initializationPromise) return this._initializationPromise;
 
-      this.handLandmarker = await HandLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath: '/models/hand_landmarker.task',
-          delegate: 'GPU'
-        },
-        runningMode: 'VIDEO',
-        numHands: this.numHands,
-        minHandDetectionConfidence: 0.5,
-        minHandPresenceConfidence: 0.5,
-        minTrackingConfidence: 0.5
-      });
+    this._initializationPromise = (async () => {
+      try {
+        const vision = await FilesetResolver.forVisionTasks('/wasm');
+        const landmarker = await HandLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: '/models/hand_landmarker.task',
+            delegate: 'GPU'
+          },
+          runningMode: 'VIDEO',
+          numHands: this.numHands,
+          minHandDetectionConfidence: 0.5,
+          minHandPresenceConfidence: 0.5,
+          minTrackingConfidence: 0.5
+        });
 
-      this.isInitialized = true;
-      return true;
-    } catch (error) {
-      console.error('[HandTracker] Failed to initialize:', error);
-      throw error;
-    }
+        this.handLandmarker = landmarker;
+        this.isInitialized = true;
+        return true;
+      } catch (error) {
+        console.error('[HandTracker] Failed to initialize:', error);
+        throw error;
+      } finally {
+        this._initializationPromise = null;
+      }
+    })();
+    return this._initializationPromise;
+  }
+
+  close() {
+    this.handLandmarker?.close();
+    this.handLandmarker = null;
+    this.isInitialized = false;
   }
 
   /**

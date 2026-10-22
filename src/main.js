@@ -96,7 +96,6 @@ const browserAdapter = new BrowserAdapter();
 browserAdapter.enable();
 
 const macosAdapter = new MacOSClientAdapter('ws://127.0.0.1:8765');
-macosAdapter.connect();
 
 // Connect Adapters & Spatial Scene Providers to Universal Interaction Engine
 interactionEngine.setAdapters({ macos: macosAdapter, browser: browserAdapter });
@@ -145,13 +144,13 @@ function updateSystemStatus(state) {
 
   if (state === 'active') {
     systemStatusPill.classList.add('status-active');
-    statusPillText.textContent = 'AIR GESTURE ACTIVE';
+    statusPillText.textContent = 'Sistema: activo';
   } else if (state === 'paused') {
     systemStatusPill.classList.add('status-paused');
-    statusPillText.textContent = 'AIR GESTURE PAUSED';
+    statusPillText.textContent = 'Sistema: en pausa';
   } else {
     systemStatusPill.classList.add('status-off');
-    statusPillText.textContent = 'AIR GESTURE OFF';
+    statusPillText.textContent = 'Sistema: inactivo';
   }
 }
 
@@ -165,17 +164,36 @@ function showFailsafeBanner(text) {
   }, 3200);
 }
 
-macosAdapter.onStatusChange = ({ connected }) => {
+macosAdapter.onStatusChange = ({ connected, connecting, error }) => {
+  if (btnToggleMacos) {
+    btnToggleMacos.disabled = Boolean(connecting);
+  }
+
+  if (connecting) {
+    if (macosLabel) macosLabel.textContent = 'Conectando…';
+    updateSystemStatus('off');
+    return;
+  }
+
   if (connected) {
-    if (btnToggleMacos && !macosAdapter.isEnabled) {
-      macosLabel.textContent = 'Control macOS: Listo';
+    if (macosLabel) {
+      macosLabel.textContent = macosAdapter.isEnabled
+        ? 'Control macOS: Activo'
+        : 'Control macOS: Listo';
     }
+    if (btnToggleMacos) {
+      btnToggleMacos.title = 'Control nativo conectado. Pulsa para activar o desactivar (ESC también desactiva).';
+    }
+    updateSystemStatus(macosAdapter.isEnabled ? 'active' : 'off');
   } else {
     if (btnToggleMacos) {
       btnToggleMacos.classList.remove('active');
-      macosLabel.textContent = 'Control macOS: Off';
-      updateSystemStatus('off');
+      btnToggleMacos.title = error
+        ? 'Daemon de macOS no disponible. Inícialo con: python3 server/macos-bridge.py'
+        : 'Conecta con el daemon local de macOS para controlar el cursor.';
     }
+    if (macosLabel) macosLabel.textContent = error ? 'Daemon no disponible' : 'Control macOS: Off';
+    updateSystemStatus('off');
   }
 };
 
@@ -225,17 +243,18 @@ globalEventBus.on('spatial_intent', ({ intent, context }) => {
 // Profile Switcher Controls
 const profileButtons = document.querySelectorAll('.btn-profile');
 const profileGuideText = document.getElementById('profile-guide-text');
+const profileSelect = document.getElementById('profile-select');
 const compactProfileBadge = document.getElementById('compact-profile-badge');
 const compactFpsBadge = document.getElementById('compact-fps-badge');
 const compactGestureHint = document.getElementById('compact-gesture-hint');
 
 const PROFILE_GUIDES = {
-  air_touch: 'Air Touch: ☝️ Cursor • 🤏 Click/Drag • ✌️/✋ Scroll • 🖐️🖐️ Zoom • 🙌 Atajos SO',
-  universal: 'Universal: ☝️ Mover • 🤏 Click / Drag • ✌️ Scroll • ✋ Pausa',
-  google_earth: 'Earth 3D: ☝️ Cursor • 🤏 Agarrar Tierra y Pan • ✋✋ Zoom Altitud • ✋↺ Rotación • ✌️ Inclinar',
-  media: 'Media: ✋ Mantener = Play/Pausa • 💨 Swipe = Skip Tema • ✌️ Scroll = Volumen • 🤏 Click',
-  game: 'Gaming: 🕹️ Mano Izq. Inclinación = WASD / Puño = Salto • 🎯 Mano Der. Apuntar / Disparar',
-  blender: 'Blender 3D: ☝️ Mover • 🤏 Seleccionar / Transformar • 🖐️🖐️ Escalar y Rotar órbita • ✌️ Zoom'
+  air_touch: 'Air Touch · Índice: mover cursor · Pellizco: clic o arrastrar · Dos dedos: desplazarse · Dos manos: zoom',
+  universal: 'Universal · Índice: mover · Pellizco: clic o arrastrar · Dos dedos: desplazarse · Palma: pausar',
+  google_earth: 'Google Earth · Índice: apuntar · Pellizco: mover el mapa · Dos manos: acercar o alejar',
+  media: 'Multimedia · Pellizco: seleccionar · Deslizamiento: cambiar pista · Dos dedos: ajustar volumen',
+  game: 'Juegos · Mano izquierda: movimiento · Mano derecha: apuntar y disparar',
+  blender: 'Blender · Índice: apuntar · Pellizco: seleccionar · Dos manos: escalar y rotar · Dos dedos: zoom'
 };
 
 profileButtons.forEach((btn) => {
@@ -249,7 +268,16 @@ profileButtons.forEach((btn) => {
       if (profileGuideText) profileGuideText.textContent = guide;
       if (compactProfileBadge) compactProfileBadge.textContent = newProfile.name;
       if (compactGestureHint) compactGestureHint.textContent = guide;
+      const activeProfileGuide = document.getElementById('active-profile-guide');
+      if (activeProfileGuide) activeProfileGuide.textContent = guide;
+      if (profileSelect) profileSelect.value = profileId;
     }
+  });
+});
+
+profileSelect?.addEventListener('change', () => {
+  profileButtons.forEach((button) => {
+    if (button.dataset.profile === profileSelect.value) button.click();
   });
 });
 
@@ -330,8 +358,8 @@ tracker.setOnFrame((frameData) => {
       // Broadcast kinematic metrics
       globalEventBus.emit(`hand:${handedness}`, kinematicState);
 
-      // Update 3D Skeletal Rig
-      visualizer.updateHand(kinematicState);
+      // Add spatial coordinates for interactions; the 2D overlay draws the only visible skeleton.
+      visualizer.projectHand(kinematicState);
 
       // Update DOM Telemetry HUD
       hud.updateHandTelemetry(kinematicState);
@@ -346,12 +374,34 @@ tracker.setOnFrame((frameData) => {
 
   // 5. Update Air 3D Studio Spatial CAD Manipulator
   if (studio.isActive) {
-    studio.update(kinematicData);
+    studio.update(kinematicData, stats);
     const studioGrabState = document.getElementById('studio-grab-state');
     if (studioGrabState) {
       studioGrabState.textContent = studio.currentPoseLabel || (studio.isGrabbing ? 'AGARRADO' : 'LIBRE');
       const isEngaged = studio.interactionMode && studio.interactionMode !== 'idle';
       studioGrabState.className = `badge-fsm ${isEngaged ? 'state-dragging' : 'state-idle'}`;
+    }
+    const studioDiagnostics = document.getElementById('studio-interaction-diagnostics');
+    if (studioDiagnostics) {
+      const isDiagnosticsMode = document.body.classList.contains('mode-diagnostics');
+      studioDiagnostics.classList.toggle('hidden', !isDiagnosticsMode);
+      if (isDiagnosticsMode) {
+        const diagnostics = studio.getInteractionDiagnostics();
+        const formatHand = (side) => {
+          const hand = diagnostics.states[side];
+          const confidence = `${Math.round((hand.confidence || 0) * 100)}%`;
+          const pinch = Number.isFinite(hand.pinchRatio) ? hand.pinchRatio.toFixed(2) : '—';
+          const openness = Number.isFinite(hand.handOpenness) ? hand.handOpenness.toFixed(2) : '—';
+          return `${side}: ${hand.state} · conf. ${confidence} · pinza/palma ${pinch} · apertura ${openness} · ${hand.reason}`;
+        };
+        studioDiagnostics.textContent = [
+          `Modo ${diagnostics.interactionMode} · manos sujetas: ${diagnostics.grabbedHands.join('+') || 'ninguna'}`,
+          formatHand('Left'),
+          formatHand('Right'),
+          `Studio ${diagnostics.updateMs.toFixed(2)} ms · pipeline ${diagnostics.frameTimeMs.toFixed(2)} ms · ${diagnostics.fps || 0} FPS · Δt ${diagnostics.deltaTime.toFixed(1)} ms`,
+          `Evento: ${diagnostics.events[diagnostics.events.length - 1]?.reason || 'sin cambios'}`
+        ].join('\n');
+      }
     }
   }
 
@@ -363,7 +413,6 @@ tracker.setOnFrame((frameData) => {
   // Hide hands that are no longer detected
   for (const side of ['Left', 'Right']) {
     if (!currentFrameHands[side] && lastDetectedHands[side]) {
-      visualizer.hideHand(side);
       hud.setHandIdle(side);
       motionEngine.reset(side);
     }
@@ -382,8 +431,12 @@ tracker.setOnFrame((frameData) => {
 
   // 9. Full Sensor View Rendering (Unconstrained Camera Sensor Overlays)
   if (fullSensorView && fullSensorView.isActive) {
+    const visualHands = hands.map((hand) => ({
+      ...hand,
+      pose: kinematicData[hand.handedness]?.pose || {}
+    }));
     fullSensorView.render({
-      hands: kinematicData,
+      hands: visualHands,
       body: frameData.body,
       face: frameData.face,
       worldModel,
@@ -439,7 +492,7 @@ function updatePerceptionDebugHUD(diag) {
 
   if (dbgFace) {
     if (diag.face?.detected) {
-      dbgFace.className = 'font-mono text-magenta';
+      dbgFace.className = 'font-mono text-accent';
       dbgFace.textContent = `DETECTED (${diag.face.landmarksCount} pts, pitch: ${diag.face.pitch}°, yaw: ${diag.face.yaw}°)`;
     } else {
       dbgFace.className = 'font-mono text-muted';
@@ -449,7 +502,7 @@ function updatePerceptionDebugHUD(diag) {
 
   if (dbgBody) {
     if (diag.body?.detected) {
-      dbgBody.className = 'font-mono text-yellow';
+      dbgBody.className = 'font-mono text-accent';
       dbgBody.textContent = `DETECTED (${diag.body.landmarksCount} landmarks)`;
     } else {
       dbgBody.className = 'font-mono text-muted';
@@ -473,14 +526,22 @@ function updatePerceptionDebugHUD(diag) {
 }
 
 // UI Event Listeners
+const workbenchWelcome = document.getElementById('workbench-welcome');
+const workbenchEngineStatus = document.getElementById('workbench-engine-status');
+const cameraErrorHelp = document.getElementById('camera-error-help');
+const skipCameraButton = document.getElementById('btn-skip-camera');
+
 btnStartCamera.addEventListener('click', async () => {
   try {
+    if (workbenchWelcome) workbenchWelcome.classList.add('hidden');
     btnStartCamera.style.display = 'none';
+    if (cameraErrorHelp) cameraErrorHelp.textContent = '';
+    if (workbenchEngineStatus) workbenchEngineStatus.textContent = 'Preparando cámara y modelos locales…';
     initLoader.classList.remove('hidden');
     initStatusText.textContent = 'Verificando acceso a la cámara...';
     tracker.cameraManager.assertSupported();
 
-    initStatusText.textContent = 'Inicializando modelos (Manos, Cara, Cuerpo, Objetos)...';
+    initStatusText.textContent = 'Inicializando seguimiento local de manos…';
 
     await tracker.initialize();
 
@@ -489,24 +550,49 @@ btnStartCamera.addEventListener('click', async () => {
 
     fullSensorView.setActive(true);
     cameraModal.classList.add('hidden');
+    document.body.classList.add('engine-running');
+    if (workbenchWelcome) workbenchWelcome.classList.add('hidden');
   } catch (err) {
     console.error('Initialization error:', err);
     initStatusText.textContent = `Error: ${err.message || err}`;
+    if (cameraErrorHelp) cameraErrorHelp.textContent = err.message || String(err);
+    if (workbenchEngineStatus) workbenchEngineStatus.textContent = 'No se pudo iniciar la cámara';
+    initLoader.classList.add('hidden');
     btnStartCamera.style.display = 'inline-flex';
     btnStartCamera.textContent = 'Reintentar';
   }
 });
 
+document.getElementById('welcome-start-camera')?.addEventListener('click', () => {
+  if (workbenchWelcome) workbenchWelcome.classList.add('hidden');
+  cameraModal?.classList.remove('hidden');
+});
+
+skipCameraButton?.addEventListener('click', () => {
+  cameraModal?.classList.add('hidden');
+  if (workbenchWelcome) workbenchWelcome.classList.remove('hidden');
+  if (workbenchEngineStatus) workbenchEngineStatus.textContent = 'Modo de exploración · Cámara apagada';
+});
+
 // Toggle Native macOS Control
 if (btnToggleMacos) {
   btnToggleMacos.addEventListener('click', () => {
-    if (!macosAdapter.isConnected) {
+    if (macosAdapter.isEnabled) {
+      macosAdapter.isEnabled = false;
+      btnToggleMacos.classList.remove('active');
+      macosLabel.textContent = macosAdapter.isConnected ? 'Control macOS: Listo' : 'Control macOS: Off';
+      updateSystemStatus('off');
+      return;
+    }
+
+    macosAdapter.isEnabled = true;
+    if (macosAdapter.isConnected) {
+      btnToggleMacos.classList.add('active');
+      macosLabel.textContent = 'Control macOS: Activo';
+      updateSystemStatus(interactionEngine.isSystemPaused ? 'paused' : 'active');
+    } else {
       macosAdapter.connect();
     }
-    macosAdapter.isEnabled = !macosAdapter.isEnabled;
-    btnToggleMacos.classList.toggle('active', macosAdapter.isEnabled);
-    macosLabel.textContent = macosAdapter.isEnabled ? 'Control macOS: ACTIVO' : 'Control macOS: Off';
-    updateSystemStatus(macosAdapter.isEnabled ? (interactionEngine.isSystemPaused ? 'paused' : 'active') : 'off');
   });
 }
 
@@ -515,7 +601,7 @@ globalEventBus.on('failsafe:emergency_stop', () => {
   macosAdapter.isEnabled = false;
   if (btnToggleMacos) {
     btnToggleMacos.classList.remove('active');
-    macosLabel.textContent = 'Control macOS: Off';
+    macosLabel.textContent = macosAdapter.isConnected ? 'Control macOS: Listo' : 'Control macOS: Off';
   }
   updateSystemStatus('off');
   showFailsafeBanner('🛑 FAILSAFE: Air Gesture desactivado por doble puño (✊+✊)');
@@ -537,7 +623,7 @@ window.addEventListener('keydown', (e) => {
     macosAdapter.isEnabled = false;
     if (btnToggleMacos) {
       btnToggleMacos.classList.remove('active');
-      macosLabel.textContent = 'Control macOS: Off';
+      macosLabel.textContent = macosAdapter.isConnected ? 'Control macOS: Listo' : 'Control macOS: Off';
     }
     updateSystemStatus('off');
     showFailsafeBanner('🛑 FAILSAFE: Control cancelado con tecla Escape');
@@ -550,27 +636,38 @@ btnToggleAr.addEventListener('click', () => {
   if (isArMode) {
     videoEl.classList.remove('hidden-ar');
     btnToggleAr.classList.add('active');
-    arLabel.textContent = 'Modo AR';
+    arLabel.textContent = 'Vista de cámara';
   } else {
     videoEl.classList.add('hidden-ar');
     btnToggleAr.classList.remove('active');
-    arLabel.textContent = 'Modo Vacío 3D';
+    arLabel.textContent = 'Mostrar cámara';
   }
 });
 
 // Calibrate Spatial Baseline Z
+const calibrationStatus = document.getElementById('calibration-status');
+let calibrationFeedbackTimer;
 btnCalibrateZ.addEventListener('click', () => {
   if (latestRawLandmarksForCalibration) {
     const { landmarks, width, height } = latestRawLandmarksForCalibration;
     const res = motionEngine.calibrator.setCalibrationBaseline(landmarks, width, height);
     if (res) {
+      if (calibrationStatus) calibrationStatus.textContent = 'Distancia calibrada';
       btnCalibrateZ.classList.add('active');
       btnCalibrateZ.querySelector('span').textContent = '¡Calibrado!';
-      setTimeout(() => {
+      clearTimeout(calibrationFeedbackTimer);
+      calibrationFeedbackTimer = setTimeout(() => {
         btnCalibrateZ.classList.remove('active');
-        btnCalibrateZ.querySelector('span').textContent = 'Calibrar Z';
+        btnCalibrateZ.querySelector('span').textContent = 'Ajustar';
+        if (calibrationStatus) calibrationStatus.textContent = '';
       }, 1500);
     }
+  } else if (calibrationStatus) {
+    calibrationStatus.textContent = 'Mostrá una mano para calibrar la distancia';
+    clearTimeout(calibrationFeedbackTimer);
+    calibrationFeedbackTimer = setTimeout(() => {
+      calibrationStatus.textContent = '';
+    }, 3000);
   }
 });
 
@@ -600,13 +697,23 @@ if (btnSwapHands) {
 // Full Sensor View Toggle (100% Native Uncropped Camera Frame + Landmarker Overlays)
 const btnFullSensorView = document.getElementById('btn-full-sensor-view');
 const lblSensorView = document.getElementById('sensor-view-label');
+const selectTrackingView = document.getElementById('select-tracking-view');
 if (btnFullSensorView) {
   btnFullSensorView.addEventListener('click', () => {
     const active = fullSensorView.toggle();
     btnFullSensorView.classList.toggle('active', active);
     if (lblSensorView) {
-      lblSensorView.textContent = active ? 'Sensor: ON (16:9)' : 'Full Sensor View';
+      lblSensorView.textContent = active ? 'Seguimiento visual' : 'Mostrar seguimiento';
     }
+  });
+}
+
+if (selectTrackingView) {
+  selectTrackingView.addEventListener('change', () => {
+    fullSensorView.setVisualizationMode(selectTrackingView.value);
+    fullSensorView.setActive(true);
+    if (btnFullSensorView) btnFullSensorView.classList.add('active');
+    if (lblSensorView) lblSensorView.textContent = 'Seguimiento visual';
   });
 }
 
@@ -620,13 +727,41 @@ if (btnToggleBodyTracker) {
     try {
       const isEnabled = await tracker.toggleBodyTracking();
       btnToggleBodyTracker.classList.toggle('active', isEnabled);
+      btnToggleBodyTracker.setAttribute('aria-pressed', String(isEnabled));
       lblBodyTrackerState.textContent = isEnabled ? 'ON' : 'OFF';
       lblBodyTrackerState.className = isEnabled ? 'text-accent' : 'text-muted';
     } catch (e) {
       console.error('Error toggling body tracker:', e);
+      btnToggleBodyTracker.classList.remove('active');
+      btnToggleBodyTracker.setAttribute('aria-pressed', 'false');
       lblBodyTrackerState.textContent = 'ERR';
+      lblBodyTrackerState.className = 'text-muted';
     } finally {
       btnToggleBodyTracker.disabled = false;
+    }
+  });
+}
+
+const btnToggleFaceTracker = document.getElementById('btn-toggle-face-tracker');
+const lblFaceTrackerState = document.getElementById('lbl-face-tracker-state');
+if (btnToggleFaceTracker) {
+  btnToggleFaceTracker.addEventListener('click', async () => {
+    btnToggleFaceTracker.disabled = true;
+    lblFaceTrackerState.textContent = 'CARGANDO...';
+    try {
+      const isEnabled = await tracker.toggleFaceTracking();
+      btnToggleFaceTracker.classList.toggle('active', isEnabled);
+      btnToggleFaceTracker.setAttribute('aria-pressed', String(isEnabled));
+      lblFaceTrackerState.textContent = isEnabled ? 'ON' : 'OFF';
+      lblFaceTrackerState.className = isEnabled ? 'text-accent' : 'text-muted';
+    } catch (error) {
+      console.error('Error toggling face tracker:', error);
+      btnToggleFaceTracker.classList.remove('active');
+      btnToggleFaceTracker.setAttribute('aria-pressed', 'false');
+      lblFaceTrackerState.textContent = 'ERR';
+      lblFaceTrackerState.className = 'text-muted';
+    } finally {
+      btnToggleFaceTracker.disabled = false;
     }
   });
 }
@@ -704,12 +839,18 @@ function setPointerMode(mode) {
     if (btnNav) btnNav.classList.toggle('active', m === targetShort);
     if (btnDock) btnDock.classList.toggle('active', m === targetShort);
   });
+  document.querySelectorAll('[data-pointer-mode]').forEach((button) => {
+    button.classList.toggle('active', button.dataset.pointerMode === mode);
+  });
 }
 
 ['rel', 'abs', 'auto'].forEach((m) => {
   const modeKey = m === 'rel' ? 'relative' : (m === 'abs' ? 'absolute' : 'auto');
   document.getElementById(`btn-nav-mode-${m}`)?.addEventListener('click', () => setPointerMode(modeKey));
   document.getElementById(`btn-mode-${m}`)?.addEventListener('click', () => setPointerMode(modeKey));
+});
+document.querySelectorAll('[data-pointer-mode]').forEach((button) => {
+  button.addEventListener('click', () => setPointerMode(button.dataset.pointerMode));
 });
 
 // Neutral Center Calibration
@@ -756,6 +897,7 @@ function toggleDiagnostics(forceState = null) {
   const isHidden = centerStage.classList.contains('hidden-diagnostics');
   const nextVisible = forceState !== null ? forceState : isHidden;
   centerStage.classList.toggle('hidden-diagnostics', !nextVisible);
+  document.body.classList.toggle('mode-diagnostics', nextVisible);
   if (btnToggleDiagnostics) {
     btnToggleDiagnostics.classList.toggle('active', nextVisible);
   }
@@ -775,6 +917,7 @@ if (btnCloseDiagnostics) {
 const btnToggleStudio = document.getElementById('btn-toggle-studio');
 const studioHud = document.getElementById('studio-hud');
 const btnCloseStudio = document.getElementById('btn-close-studio');
+const btnSwitchToPhysics = document.getElementById('btn-switch-to-physics');
 
 const studioMetaName = document.getElementById('studio-meta-name');
 const studioMetaFormat = document.getElementById('studio-meta-format');
@@ -782,6 +925,15 @@ const studioMetaTris = document.getElementById('studio-meta-tris');
 const studioMetaVerts = document.getElementById('studio-meta-verts');
 const studioMetaDims = document.getElementById('studio-meta-dims');
 const studioMetaScale = document.getElementById('studio-meta-scale');
+const studioBimanualMode = document.getElementById('studio-bimanual-mode');
+const studioRotationTarget = document.getElementById('studio-rotation-target');
+
+studioBimanualMode?.addEventListener('change', () => {
+  studio.setBimanualMode(studioBimanualMode.value);
+});
+studioRotationTarget?.addEventListener('change', () => {
+  studio.setRotationTarget(studioRotationTarget.value);
+});
 
 // Update Telemetry Display when model changes
 studio.onMetadataUpdate = (meta) => {
@@ -816,6 +968,7 @@ if (btnToggleStudio) {
 if (btnCloseStudio) {
   btnCloseStudio.addEventListener('click', () => toggleStudio(false));
 }
+btnSwitchToPhysics?.addEventListener('click', () => togglePhysics(true));
 
 // Preset Model Switcher
 const presetButtons = document.querySelectorAll('.btn-studio-preset');
@@ -934,6 +1087,7 @@ window.addEventListener('drop', (e) => {
 const btnTogglePhysics = document.getElementById('btn-toggle-physics');
 const physicsHud = document.getElementById('physics-hud');
 const btnClosePhysics = document.getElementById('btn-close-physics');
+const btnSwitchToStudio = document.getElementById('btn-switch-to-studio');
 
 const physicsStatCount = document.getElementById('physics-stat-count');
 const physicsStatSpeed = document.getElementById('physics-stat-speed');
@@ -969,6 +1123,7 @@ if (btnTogglePhysics) {
 if (btnClosePhysics) {
   btnClosePhysics.addEventListener('click', () => togglePhysics(false));
 }
+btnSwitchToStudio?.addEventListener('click', () => toggleStudio(true));
 
 // Spawner Buttons
 const btnSpawnCube = document.getElementById('btn-spawn-cube');
@@ -1099,3 +1254,60 @@ if (gamesTabGroup) {
     }
   });
 }
+
+const appTabBar = document.querySelector('.app-tab-bar');
+if (appTabBar) {
+  const appTabs = [...appTabBar.querySelectorAll('[data-app-tab]')];
+  const setAppTab = (tab) => {
+    document.body.classList.toggle('mode-diagnostics', tab === 'diagnostics');
+    appTabs.forEach((button) => {
+      const isActive = button.dataset.appTab === tab;
+      button.classList.toggle('active', isActive);
+      if (isActive) button.setAttribute('aria-current', 'page');
+      else button.removeAttribute('aria-current');
+    });
+  };
+
+  appTabBar.addEventListener('click', (event) => {
+    const tab = event.target.closest('[data-app-tab]')?.dataset.appTab;
+    if (!tab) return;
+
+    if (tab !== 'games' && gamesLabModal && !gamesLabModal.classList.contains('hidden')) {
+      toggleGamesLab(false);
+    }
+    if (tab !== 'labs' && studio.isActive) toggleStudio(false);
+    if (tab !== 'labs' && physicsLab.isActive) togglePhysics(false);
+    if (tab !== 'diagnostics' && centerStage && !centerStage.classList.contains('hidden-diagnostics')) {
+      toggleDiagnostics(false);
+    }
+
+    if (tab === 'games' && gamesLabModal?.classList.contains('hidden')) toggleGamesLab(true);
+    if (tab === 'labs' && !studio.isActive && !physicsLab.isActive) toggleStudio(true);
+    if (tab === 'diagnostics' && centerStage?.classList.contains('hidden-diagnostics')) toggleDiagnostics(true);
+    setAppTab(tab);
+  });
+
+  [btnCloseGames, btnCloseStudio, btnClosePhysics, btnCloseDiagnostics].forEach((button) => {
+    button?.addEventListener('click', () => setAppTab('control'));
+  });
+  btnToggleGamesLab?.addEventListener('click', () => {
+    setAppTab(gamesLabModal?.classList.contains('hidden') ? 'control' : 'games');
+  });
+  btnToggleStudio?.addEventListener('click', () => {
+    setAppTab(studio.isActive ? 'labs' : 'control');
+  });
+  btnTogglePhysics?.addEventListener('click', () => {
+    setAppTab(physicsLab.isActive ? 'labs' : 'control');
+  });
+  btnToggleDiagnostics?.addEventListener('click', () => {
+    setAppTab(centerStage?.classList.contains('hidden-diagnostics') ? 'diagnostics' : 'control');
+  });
+}
+
+const navMore = document.querySelector('.nav-more');
+navMore?.addEventListener('toggle', () => {
+  document.querySelector('.top-nav')?.classList.toggle('menu-open', navMore.open);
+});
+navMore?.querySelector('.nav-more-menu')?.addEventListener('click', (event) => {
+  if (event.target.closest('button')) navMore.open = false;
+});

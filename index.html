@@ -2,11 +2,20 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Air Gesture — Moderno Tech</title>
-    <meta name="theme-color" content="#0b0b10" />
+    <meta name="theme-color" content="#070a13" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Air Gesture" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/moderno-logo.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/moderno-logo-192.png" />
+    <script>
+      if (matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) {
+        document.documentElement.dataset.displayMode = 'standalone';
+      }
+    </script>
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
@@ -27,7 +36,7 @@
           </div>
           <div class="brand-text">
             <span class="brand-title">Air Gesture</span>
-            <span class="brand-subtitle">Control Center • macOS Background Engine</span>
+            <span class="brand-subtitle">Control por gestos · Todo se procesa en tu dispositivo</span>
           </div>
         </div>
 
@@ -46,21 +55,42 @@
           </div>
         </div>
 
+        <label class="profile-select-wrap">
+          <span>MODO DE USO</span>
+          <select id="profile-select" aria-label="Perfil de interacción">
+            <option value="air_touch">Air Touch</option>
+            <option value="universal">Universal Desktop</option>
+            <option value="google_earth">Google Earth 3D</option>
+            <option value="media">Media / Música</option>
+            <option value="game">Gaming WASD</option>
+            <option value="blender">Blender 3D</option>
+          </select>
+        </label>
+
         <div class="nav-actions">
-          <button id="btn-toggle-ar" class="btn btn-secondary active">
+          <button id="btn-toggle-ar" class="btn btn-secondary active" aria-label="Alternar vista de cámara">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
               <circle cx="12" cy="13" r="4"/>
             </svg>
-            <span id="ar-label">Modo AR</span>
+            <span id="ar-label">Vista de cámara</span>
           </button>
 
-          <button id="btn-full-sensor-view" class="btn btn-secondary btn-sensor-view" title="FULL SENSOR VIEW: Muestra el campo completo de la cámara (16:9) sin crop ni zoom, con esqueletos superpuestos">
-            <span class="sensor-icon">📐</span>
-            <span id="sensor-view-label">Full Sensor View</span>
+          <button id="btn-full-sensor-view" class="btn btn-secondary btn-sensor-view active" title="Mostrar u ocultar las visualizaciones de seguimiento">
+            <span class="sensor-icon" aria-hidden="true">◎</span>
+            <span id="sensor-view-label">Seguimiento visual</span>
           </button>
 
-          <button id="btn-calibrate-z" class="btn btn-primary" title="Calibra el plano Z de trabajo según la distancia actual de tu mano">
+          <label class="tracking-view-control" for="select-tracking-view" title="Para mostrar el cuerpo o rostro en estos modos, activalos desde Diagnóstico avanzado.">
+            <span>Visualización</span>
+            <select id="select-tracking-view" aria-label="Modo de visualización del seguimiento">
+              <option value="standard">Estándar</option>
+              <option value="body">Corporal</option>
+              <option value="diagnostics">Diagnóstico</option>
+            </select>
+          </label>
+
+          <button id="btn-calibrate-z" class="btn btn-primary" title="Ajusta la distancia de trabajo según la posición actual de tu mano">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"/>
               <path d="m4.93 4.93 4.24 4.24"/>
@@ -68,77 +98,57 @@
               <path d="m14.83 14.83 4.24 4.24"/>
               <path d="m9.17 14.83-4.24 4.24"/>
             </svg>
-            <span>Calibrar Z</span>
+            <span>Ajustar</span>
           </button>
-
-          <button id="btn-toggle-mirror" class="btn btn-icon" title="Alternar modo espejo">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="16 3 21 3 21 8"/>
-              <line x1="4" y1="20" x2="21" y2="3"/>
-              <polyline points="21 16 21 21 16 21"/>
-              <line x1="15" y1="15" x2="21" y2="21"/>
-              <polyline points="4 8 4 3 9 3"/>
-              <polyline points="9 21 4 21 4 16"/>
-            </svg>
-          </button>
-
-          <button id="btn-swap-hands" class="btn btn-secondary" title="Invertir asignación Mano Izquierda / Derecha">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M7 16V4M7 4L3 8M7 4L11 8M17 8V20M17 20L21 16M17 20L13 16"/>
-            </svg>
-            <span id="swap-hands-label">Swap L/R</span>
-          </button>
+          <span id="calibration-status" class="toolbar-feedback" role="status" aria-live="polite"></span>
 
           <div class="system-status-pill status-off" id="system-status-pill" title="Estado de Entrada del Sistema Operativo">
             <span class="status-pulse-dot" id="status-pulse-dot"></span>
-            <span class="status-pill-text" id="status-pill-text">AIR GESTURE OFF</span>
+            <span class="status-pill-text" id="status-pill-text">Sistema: inactivo</span>
           </div>
 
-          <button id="btn-toggle-macos" class="btn btn-secondary btn-macos" title="Activar/Desactivar control real del cursor en macOS (Failsafe: ESC)">
-            <span class="macos-indicator"></span>
-            <span id="macos-label">Control macOS: Off</span>
-          </button>
-
-          <button id="btn-toggle-studio" class="btn btn-primary btn-studio" title="Abrir Air 3D Studio (Manipulador Holográfico Tony Stark)">
-            <span class="studio-icon">🔮</span>
-            <span id="studio-btn-label">Air 3D Studio</span>
-          </button>
-
-          <button id="btn-toggle-physics" class="btn btn-secondary btn-physics" title="Abrir Air Physics Lab (Motor de Física Rígida y Lanzamientos Espaciales)">
-            <span class="physics-icon">⚛️</span>
-            <span id="physics-btn-label">Air Physics Lab</span>
-          </button>
-
-          <button id="btn-toggle-games-lab" class="btn btn-secondary btn-games" title="Abrir Air Games Lab (Plataforma de Juegos Espaciales por Cámara)">
-            <span class="games-icon">🎮</span>
-            <span id="games-btn-label">Air Games</span>
-          </button>
-
-          <button id="btn-compact-mode" class="btn btn-secondary" title="Minimizar UI a HUD compacto de segundo plano">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="4 14 10 14 10 20"/>
-              <polyline points="20 10 14 10 14 4"/>
-              <line x1="14" y1="10" x2="21" y2="3"/>
-              <line x1="3" y1="21" x2="10" y2="14"/>
-            </svg>
-            <span id="compact-label">Modo Fondo</span>
-          </button>
-
-          <button id="btn-toggle-json" class="btn btn-secondary">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="16 18 22 12 16 6"/>
-              <polyline points="8 6 2 12 8 18"/>
-            </svg>
-            <span>Contrato JSON</span>
-          </button>
-
-          <button id="btn-toggle-diagnostics" class="btn btn-secondary" title="Abrir/Cerrar panel de Diagnóstico de Señal, Jitter y Pruebas">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 3v18h18"/>
-              <path d="m19 9-5 5-4-4-3 3"/>
-            </svg>
-            <span id="diagnostics-btn-label">Diagnóstico</span>
-          </button>
+          <details class="nav-more">
+            <summary class="btn btn-secondary">Más opciones</summary>
+            <div class="nav-more-menu">
+              <button id="btn-toggle-mirror" class="btn btn-icon" title="Alternar modo espejo" aria-label="Alternar modo espejo">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+                  <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
+                  <polyline points="4 8 4 3 9 3"/><polyline points="9 21 4 21 4 16"/>
+                </svg>
+              </button>
+              <div class="pointer-mode-shortcuts" role="group" aria-label="Modo de puntero">
+                <span>Modo</span>
+                <button class="btn active" type="button" data-pointer-mode="relative">Relativo</button>
+                <button class="btn" type="button" data-pointer-mode="absolute">Directo</button>
+                <button class="btn" type="button" data-pointer-mode="auto">Auto</button>
+              </div>
+              <button id="btn-swap-hands" class="btn btn-secondary" title="Invertir asignación de manos">
+                <span id="swap-hands-label">Invertir manos</span>
+              </button>
+              <button id="btn-toggle-macos" class="btn btn-secondary btn-macos" title="Conecta con el daemon local de macOS para controlar el cursor." aria-label="Activar control del cursor en macOS">
+                <span class="macos-indicator" aria-hidden="true"></span><span id="macos-label" aria-live="polite">Control macOS: Off</span>
+              </button>
+              <button id="btn-toggle-studio" class="btn btn-primary btn-studio" title="Abrir Air 3D Studio">
+                <span class="studio-icon">🔮</span><span id="studio-btn-label">Air 3D Studio</span>
+              </button>
+              <button id="btn-toggle-physics" class="btn btn-secondary btn-physics" title="Abrir Air Physics Lab">
+                <span class="physics-icon">⚛️</span><span id="physics-btn-label">Air Physics Lab</span>
+              </button>
+              <button id="btn-toggle-games-lab" class="btn btn-secondary btn-games" title="Abrir Air Games Lab">
+                <span class="games-icon">🎮</span><span id="games-btn-label">Air Games</span>
+              </button>
+              <button id="btn-compact-mode" class="btn btn-secondary" title="Minimizar UI a HUD compacto">
+                <span id="compact-label">Modo compacto</span>
+              </button>
+              <button id="btn-toggle-json" class="btn btn-secondary" aria-controls="json-drawer">
+                <span>Consola JSON</span>
+              </button>
+              <button id="btn-toggle-diagnostics" class="btn btn-secondary" title="Abrir diagnóstico de señal, jitter y percepción">
+                <span id="diagnostics-btn-label">Diagnóstico avanzado</span>
+              </button>
+            </div>
+          </details>
         </div>
       </header>
 
@@ -216,6 +226,7 @@
             <span class="studio-title">AIR 3D STUDIO</span>
             <span class="studio-mode-tag">Holographic CAD</span>
           </div>
+          <button id="btn-switch-to-physics" class="btn btn-xs btn-secondary" type="button">Physics Lab</button>
           <button id="btn-close-studio" class="btn-close-hud" title="Cerrar Studio">✕</button>
         </div>
 
@@ -268,6 +279,7 @@
               <span class="telemetry-item-lbl">ESTADO GRAB</span>
               <span id="studio-grab-state" class="badge-fsm state-idle">LIBRE</span>
             </div>
+            <div id="studio-interaction-diagnostics" class="studio-interaction-diagnostics hidden col-span-2"></div>
           </div>
         </div>
 
@@ -301,23 +313,44 @@
             <span>🔄 Auto-Giro: Off</span>
           </button>
           <button id="btn-studio-reset" class="btn btn-secondary btn-xs">
-            <span>🎯 Centrar y Reset</span>
+            <span>🎯 Restablecer vista</span>
           </button>
         </div>
 
         <!-- Spatial Gesture Guide for Studio -->
         <div class="studio-gesture-guide">
-          <div class="guide-item">
-            <span class="guide-icon">☝️</span>
-            <span><strong>Apuntar:</strong> Rayo láser 3D sobre el modelo</span>
+          <div class="studio-transform-options">
+            <label>
+              <span>Control con dos manos</span>
+              <select id="studio-bimanual-mode">
+                <option value="combined">Escala + rotación</option>
+                <option value="scale">Priorizar escala</option>
+                <option value="rotate">Priorizar rotación</option>
+              </select>
+            </label>
+            <label>
+              <span>Rotación aplicada a</span>
+              <select id="studio-rotation-target">
+                <option value="object">El objeto</option>
+                <option value="camera">La cámara (órbita)</option>
+              </select>
+            </label>
           </div>
           <div class="guide-item">
             <span class="guide-icon">🤏</span>
-            <span><strong>Pinch + Mover:</strong> Agarrar y trasladar (X, Y y Profundidad Z)</span>
+            <span><strong>Agarrar y mover:</strong> Pellizcá sobre el modelo para trasladarlo.</span>
           </div>
           <div class="guide-item">
-            <span class="guide-icon">✋✋</span>
-            <span><strong>Dos Manos:</strong> Separar = Escala • Girar = Rotación 360°</span>
+            <span class="guide-icon">✌️</span>
+            <span><strong>Rotar:</strong> Con una mano agarrando, hacé la V con la otra y movela.</span>
+          </div>
+          <div class="guide-item">
+            <span class="guide-icon">🤏🤏</span>
+            <span><strong>Dos manos:</strong> Pellizcá el modelo con ambas; separarlas escala y cambiar su orientación rota.</span>
+          </div>
+          <div class="guide-item">
+            <span class="guide-icon">✋</span>
+            <span><strong>Mano abierta:</strong> Neutral. Usá “Restablecer vista” para volver a la orientación inicial.</span>
           </div>
         </div>
       </div>
@@ -330,6 +363,7 @@
             <span class="studio-title">AIR PHYSICS LAB</span>
             <span class="physics-mode-tag">Rigid Dynamics</span>
           </div>
+          <button id="btn-switch-to-studio" class="btn btn-xs btn-secondary" type="button">Studio 3D</button>
           <button id="btn-close-physics" class="btn-close-hud" title="Cerrar Physics Lab">✕</button>
         </div>
 
@@ -490,6 +524,19 @@
 
       <!-- Main Telemetry Stage -->
       <main class="telemetry-stage">
+        <section class="workbench-welcome hidden" id="workbench-welcome" aria-labelledby="welcome-title">
+          <span class="welcome-eyebrow">AIR GESTURE</span>
+          <h1 id="welcome-title">Controlá tu computadora con gestos</h1>
+          <p>Activá la cámara y mové una mano frente a ella. El seguimiento se procesa en este dispositivo.</p>
+          <p class="welcome-profile-guide" id="active-profile-guide">Air Touch · Mové el cursor con el índice · Pellizcá para hacer clic o arrastrar · Usá dos dedos para desplazarte</p>
+          <div class="welcome-status-row">
+            <span class="welcome-status-dot" aria-hidden="true"></span>
+            <span id="workbench-engine-status" role="status" aria-live="polite" aria-atomic="true">Cámara apagada</span>
+            <span>El video no sale de tu dispositivo</span>
+          </div>
+          <button id="welcome-start-camera" class="btn btn-primary" type="button">Activar cámara</button>
+        </section>
+
         <!-- Left Hand Telemetry Card -->
         <section id="hand-card-left" class="glass-card hand-card hand-idle">
           <div class="card-header">
@@ -608,7 +655,6 @@
         <div class="center-crosshair">
           <div class="crosshair-ring"></div>
           <div class="crosshair-lines"></div>
-          <span class="crosshair-text">VOLUMEN ESPACIAL ACTIVO</span>
         </div>
 
         <!-- Center Stage (Diagnostics & Testing Dock - Hidden by default) -->
@@ -624,6 +670,7 @@
               </div>
               <button id="btn-close-diagnostics" class="btn-close-hud" title="Cerrar Diagnóstico">✕</button>
             </div>
+            <p class="diagnostic-help">Mide la estabilidad del puntero. Primero calibrá el centro neutral; ajustá filtros solo si observás vibración o respuesta lenta.</p>
 
             <!-- Pointer Quality Score Metric -->
             <div class="metric-group" style="padding: 6px 10px;">
@@ -695,8 +742,11 @@
             <!-- Perception Trackers Control Toolbar -->
             <!-- Perception Trackers Control Toolbar -->
             <div class="perception-toolbar" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 2px;">
-              <button id="btn-toggle-body-tracker" class="btn btn-secondary btn-xs" title="Activar/Desactivar Pose Corporal (Fase 2)">
-                <span>👤 Cuerpo: <strong id="lbl-body-tracker-state" class="text-muted">OFF</strong></span>
+              <button id="btn-toggle-body-tracker" class="btn btn-secondary btn-xs" title="Activar o pausar el análisis corporal local" aria-pressed="false">
+                <span>Cuerpo: <strong id="lbl-body-tracker-state" class="text-muted">OFF</strong></span>
+              </button>
+              <button id="btn-toggle-face-tracker" class="btn btn-secondary btn-xs" title="Activar o pausar el análisis facial local" aria-pressed="false">
+                <span>Rostro: <strong id="lbl-face-tracker-state" class="text-muted">OFF</strong></span>
               </button>
               <button id="btn-toggle-object-tracker" class="btn btn-secondary btn-xs" title="Activar/Desactivar Percepción de Objetos (Apariencia + Geometría + Movimiento)">
                 <span>🎯 Objetos: <strong id="lbl-object-tracker-state" class="text-muted">OFF</strong></span>
@@ -1000,8 +1050,9 @@
           <!-- Bottom Controls & Hints -->
           <div class="games-lab-footer">
             <div class="games-guide-pill" id="games-guide-pill">
-              <span id="games-guide-text">🏓 Air Pong: Mano Izquierda = Paleta Izq • Mano Derecha = Paleta Der (o vs IA)</span>
+              <span id="games-guide-text" aria-live="polite">🏓 Air Pong: Mano Izquierda = Paleta Izq • Mano Derecha = Paleta Der (o vs IA)</span>
             </div>
+            <span class="games-camera-hint">Explorá los juegos sin cámara; para controlarlos con gestos, iniciá el seguimiento.</span>
           </div>
         </div>
       </div>
@@ -1015,17 +1066,19 @@
               <circle cx="12" cy="13" r="4"/>
             </svg>
           </div>
-          <h2 class="modal-title">Iniciar Motion Engine</h2>
+          <h2 class="modal-title">Activar cámara</h2>
           <p class="modal-desc">
-            El sistema procesará tu cámara frontal <strong>100% de forma local</strong> sin enviar frames a la nube, calculando la cinemática de 21 landmarks en 3D para ambas manos.
+            Usamos la cámara para seguir tus manos. El video se procesa en este dispositivo y no se envía a internet. También podés explorar sin activarla.
           </p>
           <button id="btn-start-camera" class="btn btn-primary btn-large">
-            <span>Permitir Cámara y Comenzar</span>
+            <span>Permitir acceso y empezar</span>
           </button>
           <div id="init-loader" class="init-loader hidden">
             <div class="spinner"></div>
             <span id="init-status-text">Cargando modelos locales de MediaPipe...</span>
           </div>
+          <span id="camera-error-help" class="camera-error-help" role="status" aria-live="polite"></span>
+          <button id="btn-skip-camera" class="btn btn-secondary btn-camera-later" type="button">Explorar sin cámara</button>
         </div>
       </div>
     <!-- Floating Emergency Failsafe Toast -->
@@ -1033,6 +1086,24 @@
       <span class="failsafe-icon">🛑</span>
       <span id="failsafe-text" class="failsafe-text">AIR GESTURE DESACTIVADO (EMERGENCIA: ✊+✊)</span>
     </div>
+    <nav class="app-tab-bar" aria-label="Navegación de Air Gesture">
+      <button class="app-tab active" type="button" data-app-tab="control" aria-label="Control" aria-current="page">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h4l2-7 4 14 2-7h4"/></svg>
+        <span>Control</span>
+      </button>
+      <button class="app-tab" type="button" data-app-tab="games" aria-label="Juegos">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10h12a4 4 0 0 1 3.8 5l-.7 2.3a2 2 0 0 1-3.2 1l-2.2-1.8h-7l-2.2 1.8a2 2 0 0 1-3.2-1L2.8 15A4 4 0 0 1 6 10Z"/><path d="M7 13h4m-2-2v4m6-2h.01M18 13h.01"/></svg>
+        <span>Juegos</span>
+      </button>
+      <button class="app-tab" type="button" data-app-tab="labs" aria-label="Laboratorios">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg>
+        <span>Labs</span>
+      </button>
+      <button class="app-tab" type="button" data-app-tab="diagnostics" aria-label="Diagnóstico">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5m0 14h16M8 15l3-4 3 2 5-7"/></svg>
+        <span>Diagnóstico</span>
+      </button>
+    </nav>
 
     <script type="module" src="/src/offline-ui.js"></script>
     <script type="module" src="/src/main.js"></script>

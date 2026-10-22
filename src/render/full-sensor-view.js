@@ -6,13 +6,8 @@
  *  El video muestra el frame completo de la cámara respetando su relación de aspecto (16:9),
  *  con todos los landmarks (cara + cuerpo + manos + objetos + bounding boxes) superpuestos exactamente 1:1."
  * 
- * Renders:
- * 1. Exact Video Bounds Letterbox Alignment (Zero Crop / Zero Zoom).
- * 2. Full-Body Pose Skeleton (33 landmarks: head, spine, arms, torso, legs, feet).
- * 3. Dual-Hand Anatomical Rigs (21 landmarks per hand, joints, pinch indicators).
- * 4. Face Mesh & Head Pose Crosshair (pitch, yaw, roll, gaze vector).
- * 5. Tracked Physical Objects (bounding boxes, contours, velocity arrows, occlusion %).
- * 6. Sensor Frame Diagnostics: Stream Resolution, Aspect Ratio, Normalized Coordinate Grid [0..1].
+ * The standard view keeps interaction cues focused on hands. Body and face
+ * landmarks are available only in their opt-in visualization modes.
  */
 
 // MediaPipe anatomical Pose connections (33 landmarks)
@@ -47,12 +42,32 @@ const HAND_CONNECTIONS = [
   [5, 9], [9, 13], [13, 17]
 ];
 
+export const HAND_TRACKING_STYLE = Object.freeze({
+  stroke: '#78bfff',
+  joint: '#e4f2ff',
+  opacity: 0.9,
+  lineWidth: 1.8,
+  jointRadius: 2,
+  wristRadius: 2.4,
+  pinchRing: '#ffffff',
+  pinchRingWidth: 1.2,
+  pinchRingRadius: 5
+});
+
+const sensorViews = new WeakMap();
+
 export class FullSensorView {
   constructor(videoElement, containerElement) {
     this.video = videoElement;
     this.container = containerElement || document.body;
+    const existing = sensorViews.get(this.container);
+    if (existing) return existing;
 
-    this.isActive = true; // Active by default for immediate perception feedback
+    this.isActive = true;
+    this.visualizationMode = 'standard';
+    this._smoothedHands = new Map();
+    this._pixelRatio = 1;
+    this._canvasSize = { width: 0, height: 0 };
 
     // High-performance overlay canvas
     this.canvas = document.createElement('canvas');
@@ -61,11 +76,13 @@ export class FullSensorView {
     this.ctx = this.canvas.getContext('2d', { alpha: true });
 
     this.container.appendChild(this.canvas);
+    sensorViews.set(this.container, this);
 
     // Current calibrated video viewport on screen
     this.videoRect = { x: 0, y: 0, width: 0, height: 0 };
 
-    window.addEventListener('resize', () => this.resize());
+    this._resizeHandler = () => this.resize();
+    window.addEventListener('resize', this._resizeHandler);
   }
 
   get isEnabled() {
@@ -77,6 +94,9 @@ export class FullSensorView {
     this.canvas.classList.toggle('hidden', !this.isActive);
     if (this.isActive) {
       this.resize();
+    } else {
+      this.clear();
+      this._smoothedHands.clear();
     }
   }
 
@@ -85,13 +105,30 @@ export class FullSensorView {
     return this.isActive;
   }
 
+  setVisualizationMode(mode) {
+    if (!['standard', 'body', 'diagnostics'].includes(mode)) {
+      throw new RangeError(`Unknown tracking visualization mode: ${mode}`);
+    }
+    this.visualizationMode = mode;
+    this._smoothedHands.clear();
+  }
+
   resize() {
     if (!this.video) return;
     const contW = this.container.clientWidth || window.innerWidth;
     const contH = this.container.clientHeight || window.innerHeight;
-
-    this.canvas.width = contW;
-    this.canvas.height = contH;
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    if (
+      this._canvasSize.width !== contW ||
+      this._canvasSize.height !== contH ||
+      this._pixelRatio !== pixelRatio
+    ) {
+      this.canvas.width = Math.round(contW * pixelRatio);
+      this.canvas.height = Math.round(contH * pixelRatio);
+      this._canvasSize = { width: contW, height: contH };
+      this._pixelRatio = pixelRatio;
+      this.ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    }
 
     // Compute letterbox/pillarbox destination rect of object-fit: contain video
     const vidW = this.video.videoWidth || 1280;
@@ -141,65 +178,115 @@ export class FullSensorView {
 
     this.resize();
     const ctx = this.ctx;
-    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.clear();
 
     const vr = this.videoRect;
+    const mode = this.visualizationMode;
 
-    // 1. Draw Full Sensor Boundary Frame & Corner Rulers
-    this._renderSensorFrame(ctx, vr);
-
-    // 2. Check if dedicated FaceTracker entity is active
-    const face = data.worldModel?.getEntity('face-primary') || data.face;
-    const hasFace = Boolean(face && face.landmarks && face.landmarks.length > 0 && face.missingFrames === 0);
-
-    // 3. Draw Full-Body Pose Skeleton (33 landmarks)
-    // If hasFace is true, _renderBodyPose omits facial points 0..10 to prevent duplicate/conflicting face indicators
-    const body = data.worldModel?.getEntity('body-primary') || data.body;
-    if (body && body.landmarks && body.missingFrames === 0) {
-      this._renderBodyPose(ctx, body.landmarks, hasFace);
+    if (mode === 'diagnostics') {
+      this._renderSensorFrame(ctx, vr);
     }
 
-    // 4. Draw Hands Skeletons (21 landmarks each)
+    // Render body and face only in the explicitly selected view.
+    const face = data.worldModel?.getEntity('face-primary') || data.face;
+    const body = data.worldModel?.getEntity('body-primary') || data.body;
+    const hasFace = this._isCurrentDetection(face);
+    const hasBody = this._isCurrentDetection(body);
+
+    if (hasBody && mode === 'body') {
+      this._renderBodyPose(ctx, body.landmarks, 'body');
+    } else if (hasBody && mode === 'diagnostics') {
+      this._renderBodyPose(ctx, body.landmarks, 'diagnostics');
+    }
+
+    // Hands use raw detector coordinates. Visual smoothing never changes the
+    // landmarks or kinematics consumed by gesture and interaction systems.
     const handsList = Array.isArray(data.hands)
       ? data.hands
       : (data.hands ? Object.values(data.hands).filter(Boolean) : []);
+    const activeHands = new Set();
     for (const hand of handsList) {
-      if (hand && hand.landmarks) {
-        this._renderHand(ctx, hand.landmarks, hand.handedness || 'Right', hand.pose || {});
+      if (hand?.landmarks?.length >= 21 && (hand.confidence === undefined || hand.confidence >= 0.3)) {
+        const side = hand.handedness || 'Right';
+        const key = side.toLowerCase();
+        activeHands.add(key);
+        const landmarks = this._smoothLandmarks(key, hand.landmarks);
+        this._renderHand(ctx, landmarks, hand.pose || {});
       }
     }
-
-    // 5. Draw Face Mesh / Head Pose (Single authoritative face indicator)
-    if (hasFace) {
-      this._renderFace(ctx, face);
+    for (const key of this._smoothedHands.keys()) {
+      if (!activeHands.has(key)) this._smoothedHands.delete(key);
     }
 
-    // 6. Draw Tracked Physical Objects & Props
-    const objects = data.worldModel?.getEntitiesByType('object') || [];
-    for (const obj of objects) {
-      if (obj.missingFrames === 0) {
-        this._renderObject(ctx, obj);
+    if (hasFace && mode === 'diagnostics') {
+      this._renderDiagnosticFace(ctx, face);
+    }
+
+    if (mode === 'diagnostics') {
+      const objects = data.worldModel?.getEntitiesByType('object') || [];
+      for (const obj of objects) {
+        if (obj.missingFrames === 0) {
+          this._renderObject(ctx, obj);
+        }
       }
+      this._renderSensorHUD(ctx, vr, data);
+      this._renderPerceptionDebugBox(ctx, vr, data);
     }
+  }
 
-    // 7. Draw Live Sensor Diagnostic Telemetry Banner
-    this._renderSensorHUD(ctx, vr, data);
+  clear() {
+    if (!this.ctx) return;
+    const width = this._canvasSize?.width ?? this.canvas.width;
+    const height = this._canvasSize?.height ?? this.canvas.height;
+    this.ctx.clearRect(0, 0, width, height);
+  }
 
-    // 8. Draw AIR GESTURE - PERCEPTION DEBUG telemetry panel
-    this._renderPerceptionDebugBox(ctx, vr, data);
+  destroy() {
+    window.removeEventListener('resize', this._resizeHandler);
+    this._smoothedHands.clear();
+    this.clear();
+    this.canvas.remove();
+    this.isActive = false;
+    if (sensorViews.get(this.container) === this) sensorViews.delete(this.container);
+  }
+
+  _isCurrentDetection(entity) {
+    return Boolean(
+      entity &&
+      entity.landmarks?.length &&
+      (entity.missingFrames === undefined || entity.missingFrames === 0)
+    );
+  }
+
+  _smoothLandmarks(key, landmarks) {
+    const previous = this._smoothedHands.get(key);
+    const smoothed = landmarks.map((point, index) => {
+      const oldPoint = previous?.[index];
+      if (!oldPoint) return { x: point.x, y: point.y, z: point.z || 0 };
+
+      const distance = Math.hypot(point.x - oldPoint.x, point.y - oldPoint.y);
+      const alpha = Math.min(0.92, 0.58 + distance * 2.2);
+      return {
+        x: oldPoint.x + (point.x - oldPoint.x) * alpha,
+        y: oldPoint.y + (point.y - oldPoint.y) * alpha,
+        z: oldPoint.z + ((point.z || 0) - oldPoint.z) * alpha
+      };
+    });
+    this._smoothedHands.set(key, smoothed);
+    return smoothed;
   }
 
   _renderSensorFrame(ctx, vr) {
     // Outer Sensor Border (Cyber Cyan)
     ctx.save();
-    ctx.strokeStyle = '#00f5d4';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(120, 200, 255, 0.55)';
+    ctx.lineWidth = 1;
     ctx.strokeRect(vr.x, vr.y, vr.width, vr.height);
 
     // Corner brackets
     const bracketSize = 24;
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = '#00f5d4';
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = 'rgba(120, 200, 255, 0.72)';
 
     // Top-Left [0.0, 0.0]
     ctx.beginPath();
@@ -231,7 +318,7 @@ export class FullSensorView {
 
     // Coordinate markers
     ctx.font = '10px "JetBrains Mono", monospace';
-    ctx.fillStyle = '#00f5d4';
+    ctx.fillStyle = '#b5dcff';
     ctx.fillText('[0.0, 0.0]', vr.x + 8, vr.y + 16);
     ctx.fillText('[1.0, 0.0]', vr.x + vr.width - 64, vr.y + 16);
     ctx.fillText('[0.0, 1.0]', vr.x + 8, vr.y + vr.height - 8);
@@ -239,19 +326,24 @@ export class FullSensorView {
     ctx.restore();
   }
 
-  _renderBodyPose(ctx, landmarks, hasFace = false) {
+  _renderBodyPose(ctx, landmarks, mode = 'body') {
     ctx.save();
+    const diagnostic = mode === 'diagnostics';
+    const bodyConnections = diagnostic
+      ? POSE_CONNECTIONS.filter(([a, b]) => a >= 11 && b >= 11)
+      : [
+          [11, 12], [11, 13], [13, 15], [12, 14], [14, 16],
+          [11, 23], [12, 24], [23, 24],
+          [23, 25], [25, 27], [24, 26], [26, 28]
+        ];
+    ctx.strokeStyle = diagnostic ? 'rgba(104, 186, 255, 0.7)' : 'rgba(104, 186, 255, 0.58)';
+    ctx.lineWidth = diagnostic ? 1.15 : 1.5;
+    ctx.lineCap = 'round';
 
-    // Draw Bones (skip facial connections 0..10 if dedicated FaceTracker is rendering)
-    ctx.strokeStyle = '#ffd166';
-    ctx.lineWidth = 3;
-    for (const [aIdx, bIdx] of POSE_CONNECTIONS) {
-      if (hasFace && (aIdx < 11 || bIdx < 11)) {
-        continue; // Prevent duplicate facial connections when FaceTracker reticle is active
-      }
+    for (const [aIdx, bIdx] of bodyConnections) {
       const a = landmarks[aIdx];
       const b = landmarks[bIdx];
-      if (a && b && (a.visibility === undefined || a.visibility > 0.4) && (b.visibility === undefined || b.visibility > 0.4)) {
+      if (this._isVisibleLandmark(a) && this._isVisibleLandmark(b)) {
         const pa = this.project(a.x, a.y);
         const pb = this.project(b.x, b.y);
         ctx.beginPath();
@@ -261,15 +353,16 @@ export class FullSensorView {
       }
     }
 
-    // Draw Joints (skip facial joints 0..10 if dedicated FaceTracker is rendering)
-    const startIdx = hasFace ? 11 : 0;
-    for (let i = startIdx; i < landmarks.length; i++) {
+    const keypoints = diagnostic
+      ? landmarks.map((_, index) => index).filter(index => index >= 11)
+      : [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
+    for (const i of keypoints) {
       const lm = landmarks[i];
-      if (lm && (lm.visibility === undefined || lm.visibility > 0.4)) {
+      if (this._isVisibleLandmark(lm)) {
         const p = this.project(lm.x, lm.y);
-        ctx.fillStyle = i >= 23 ? '#00f5d4' : '#ff007f'; // Legs cyan, Torso magenta
+        ctx.fillStyle = diagnostic ? 'rgba(205, 233, 255, 0.82)' : '#b5dcff';
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, diagnostic ? 1.8 : 2.1, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -277,37 +370,27 @@ export class FullSensorView {
     ctx.restore();
   }
 
-  _renderHand(ctx, landmarks, handedness = 'Right', pose = {}) {
+  _isVisibleLandmark(point) {
+    return Boolean(
+      point &&
+      Number.isFinite(point.x) &&
+      Number.isFinite(point.y) &&
+      (point.visibility === undefined || point.visibility >= 0.45)
+    );
+  }
+
+  _renderHand(ctx, landmarks, pose = {}) {
     ctx.save();
-    const isRight = handedness.toLowerCase() === 'right';
-    const mainColor = isRight ? '#00f5d4' : '#ff007f';
-
-    // Compute apparent hand scale from wrist (0) to middle MCP (9) and palm width (5 to 17)
-    let apparentSpan = 0.15;
-    if (landmarks.length >= 21) {
-      const dWristMid = Math.hypot(landmarks[9].x - landmarks[0].x, landmarks[9].y - landmarks[0].y);
-      const dPalm = Math.hypot(landmarks[17].x - landmarks[5].x, landmarks[17].y - landmarks[5].y);
-      apparentSpan = Math.max(0.04, (dWristMid + dPalm) * 0.5);
-    }
-    // Scale factor: baseline span ~0.15 on normalized camera frame
-    const scaleFactor = Math.max(0.4, Math.min(2.8, apparentSpan / 0.14));
-
-    // Dynamic perspective-scaled strokes and joint radii:
-    // When close to camera: thicker, solid and prominent (no thin wire lines)
-    // When far from camera: thinner and delicate (no blob overlapping or obscuring the hand)
-    const boneLineWidth = Math.max(1.5, Math.min(6.5, 2.5 * scaleFactor));
-    const jointRadius = Math.max(1.5, Math.min(5.5, 2.5 * scaleFactor));
-    const tipRadius = Math.max(2.2, Math.min(8.0, 4.0 * scaleFactor));
-
-    // Draw Hand Bones
-    ctx.strokeStyle = mainColor;
-    ctx.lineWidth = boneLineWidth;
+    ctx.globalAlpha = HAND_TRACKING_STYLE.opacity;
+    ctx.strokeStyle = HAND_TRACKING_STYLE.stroke;
+    ctx.lineWidth = HAND_TRACKING_STYLE.lineWidth;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+
     for (const [aIdx, bIdx] of HAND_CONNECTIONS) {
       const a = landmarks[aIdx];
       const b = landmarks[bIdx];
-      if (a && b) {
+      if (this._isVisibleLandmark(a) && this._isVisibleLandmark(b)) {
         const pa = this.project(a.x, a.y);
         const pb = this.project(b.x, b.y);
         ctx.beginPath();
@@ -317,51 +400,58 @@ export class FullSensorView {
       }
     }
 
-    // Draw Hand Joints
-    for (let i = 0; i < landmarks.length; i++) {
+    for (const i of [0, 4, 8, 12, 16, 20]) {
       const lm = landmarks[i];
+      if (!this._isVisibleLandmark(lm)) continue;
       const p = this.project(lm.x, lm.y);
-      const isTip = [4, 8, 12, 16, 20].includes(i);
-      ctx.fillStyle = isTip ? '#ffffff' : mainColor;
+      ctx.fillStyle = HAND_TRACKING_STYLE.joint;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, isTip ? tipRadius : jointRadius, 0, Math.PI * 2);
+      ctx.arc(
+        p.x,
+        p.y,
+        i === 0 ? HAND_TRACKING_STYLE.wristRadius : HAND_TRACKING_STYLE.jointRadius,
+        0,
+        Math.PI * 2
+      );
       ctx.fill();
     }
 
-    // Pinch Indicator
-    if (pose.isPinchThumbIndex && landmarks[8]) {
+    if (pose.isPinchThumbIndex && this._isVisibleLandmark(landmarks[8])) {
       const p = this.project(landmarks[8].x, landmarks[8].y);
-      ctx.strokeStyle = '#ffd166';
-      ctx.lineWidth = Math.max(1.8, 2.2 * scaleFactor);
+      ctx.strokeStyle = HAND_TRACKING_STYLE.pinchRing;
+      ctx.lineWidth = HAND_TRACKING_STYLE.pinchRingWidth;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, Math.max(6, 12 * scaleFactor), 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, HAND_TRACKING_STYLE.pinchRingRadius, 0, Math.PI * 2);
       ctx.stroke();
     }
 
     ctx.restore();
   }
 
-  _renderFace(ctx, face) {
+  _renderDiagnosticFace(ctx, face) {
     ctx.save();
-    if (face.landmarks && face.landmarks.length > 0) {
-      const nose = face.landmarks[1] || face.landmarks[0];
-      if (nose) {
-        const p = this.project(nose.x, nose.y);
-        // Face Crosshair & Orientation (Pixel-perfect on user's face)
-        ctx.strokeStyle = '#a100ff';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 18, 0, Math.PI * 2);
-        ctx.moveTo(p.x - 26, p.y);
-        ctx.lineTo(p.x + 26, p.y);
-        ctx.moveTo(p.x, p.y - 26);
-        ctx.lineTo(p.x, p.y + 26);
-        ctx.stroke();
+    const landmarks = face.landmarks || [];
+    ctx.fillStyle = 'rgba(181, 220, 255, 0.48)';
+    for (const landmark of landmarks) {
+      if (!this._isVisibleLandmark(landmark)) continue;
+      const point = this.project(landmark.x, landmark.y);
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
-        ctx.font = 'bold 11px "JetBrains Mono", monospace';
-        ctx.fillStyle = '#a100ff';
-        ctx.fillText(`FACE [${Math.round(face.rotation?.yaw || 0)}°, ${Math.round(face.rotation?.pitch || 0)}°]`, p.x + 30, p.y + 4);
-      }
+    if (landmarks.length) {
+      const faceBox = face.boundingBox;
+      const labelPoint = faceBox
+        ? this.project(faceBox.minX, faceBox.minY)
+        : this.project(landmarks[0].x, landmarks[0].y);
+      ctx.font = '10px "JetBrains Mono", monospace';
+      ctx.fillStyle = '#d8ecfb';
+      ctx.fillText(
+        `DIAGNÓSTICO FACIAL · ${landmarks.length} puntos · yaw ${Math.round(face.rotation?.yaw || 0)}° · pitch ${Math.round(face.rotation?.pitch || 0)}°`,
+        labelPoint.x,
+        Math.max(this.videoRect.y + 14, labelPoint.y - 7)
+      );
     }
     ctx.restore();
   }
@@ -428,11 +518,11 @@ export class FullSensorView {
     ctx.stroke();
 
     ctx.font = 'bold 11px "JetBrains Mono", monospace';
-    ctx.fillStyle = '#00f5d4';
+    ctx.fillStyle = '#b5dcff';
     ctx.textAlign = 'left';
     ctx.fillText(`SENSOR: ${vidW}x${vidH} (16:9)`, barX + 14, barY + 20);
 
-    ctx.fillStyle = '#ffd166';
+    ctx.fillStyle = '#d7e9f8';
     ctx.fillText(`COVERAGE: 100% UNCONSTRAINED`, barX + 210, barY + 20);
 
     const bodyActive = data.worldModel?.getEntity('body-primary')?.missingFrames === 0 ? 'ON' : 'OFF';
@@ -542,7 +632,7 @@ export class FullSensorView {
 
     const face = data.worldModel?.getEntity('face-primary') || data.face;
     if (face && face.missingFrames === 0) {
-      ctx.fillStyle = '#a100ff';
+      ctx.fillStyle = '#b5dcff';
       const yaw = Math.round(face.rotation?.yaw || 0);
       const pitch = Math.round(face.rotation?.pitch || 0);
       ctx.fillText(`Face 001: DETECTED (pitch: ${pitch}°, yaw: ${yaw}°)`, boxX + 16, curY);
@@ -560,7 +650,7 @@ export class FullSensorView {
 
     const body = data.worldModel?.getEntity('body-primary') || data.body;
     if (body && body.missingFrames === 0) {
-      ctx.fillStyle = '#ffd166';
+      ctx.fillStyle = '#b5dcff';
       const pts = body.landmarks ? body.landmarks.length : 33;
       ctx.fillText(`Body 001: DETECTED (${pts} landmarks)`, boxX + 16, curY);
     } else {

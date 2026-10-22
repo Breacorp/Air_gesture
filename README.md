@@ -106,6 +106,18 @@ de la pantalla de inicio de Air Gesture. La app se puede instalar como PWA en na
 compatibles; para usarla offline, abrí la landing con conexión y prepará los modelos locales
 (aprox. 50 MB). No hay instaladores nativos publicados. El service worker guarda la app y sus
 archivos generados durante el build; el seguimiento utiliza modelos y WASM locales, sin fallbacks a CDN.
+El control del cursor de macOS requiere iniciar manualmente el daemon opcional desde la raíz del
+proyecto con `python3 server/macos-bridge.py`; la app web no intenta conectarse a ese servicio al
+abrirse. Si no está iniciado, el control nativo informa que no está disponible y el resto de la
+app continúa funcionando.
+Al instalarla en un móvil, Air Gesture se abre como aplicación independiente, con navegación
+propia para Control, Juegos, Laboratorios y Diagnóstico, y respeta las áreas seguras de la pantalla.
+En el navegador normal, esta navegación de la PWA permanece oculta.
+La pantalla inicial explica cómo empezar, resume los gestos del perfil seleccionado y permite
+activar la cámara o explorar sin ella. El estado de preparación se anuncia por separado para
+lectores de pantalla. En Control, los ajustes de cámara y calibración aparecen al iniciar el seguimiento; el panel de
+percepción completo se reserva para Diagnóstico. Los Juegos y Laboratorios se pueden explorar sin
+activar la cámara, y el modo de uso está disponible en la barra de la aplicación.
 El procesamiento de cámara y gestos es local. La primera visita/preparación sí descarga los
 recursos desde el sitio; una vez preparada, la app puede ejecutarse offline sin solicitudes al
 servidor durante el uso.
@@ -115,9 +127,29 @@ descargan al usar la app o elegir «Preparar para usar offline». Vercel entrega
 no recibe video ni realiza inferencias. Los modelos preparados se guardan en un caché local separado
 y se conservan al actualizar el shell de la aplicación.
 
+El seguimiento de manos es el único que se carga al iniciar la cámara y permanece como entrada
+principal de gestos. El análisis corporal y facial es opcional: se activa desde Diagnóstico avanzado
+y sus modelos se inicializan bajo demanda. La visualización Estándar muestra únicamente las manos;
+Corporal agrega articulaciones principales y Diagnóstico permite inspeccionar landmarks corporales
+y faciales sin dibujar marcadores sobre el rostro en el uso normal. El suavizado de la superposición
+es visual y no altera las coordenadas usadas por gestos, juegos o interacciones 3D.
+
+### Air 3D Studio: manipulación por pinza y rotación libre
+
+Los modelos STL, OBJ y los modelos de ejemplo solo se mueven después de confirmar una pinza sobre
+el modelo mediante el rayo 3D. La mano libre puede activar la pose de victoria (V) para rotar el
+objeto; una mano abierta normal permanece neutral. Con dos pinzas confirmadas se puede escalar y
+rotar usando la distancia y orientación tridimensional de las manos. El selector permite priorizar
+escala o rotación si el modo combinado resulta difícil de controlar. Otro selector decide si la
+rotación afecta al objeto o a la órbita de la cámara. Las transformaciones usan referencias
+capturadas al iniciar cada modo, cuaterniones para evitar bloqueos de orientación y un pivote
+centrado a partir de los límites geométricos del archivo. Una pérdida breve de seguimiento congela
+la transformación; si supera la tolerancia, libera el agarre. El botón «Restablecer vista» devuelve
+el modelo y la cámara a su orientación inicial.
+
 ### Características de la Fase 1
 1. **100% Local y Offline**: Archivos WASM y el modelo `hand_landmarker.task` residen en `public/`, sin dependencias externas.
-2. **Calibración de Profundidad $Z$**: Botón "Calibrar Z" para fijar el plano de trabajo a la distancia del escritorio.
+2. **Calibración de Profundidad $Z$**: Botón "Ajustar" para fijar el plano de trabajo a la distancia actual de la mano.
 3. **Rig 3D en Three.js**: Visualización en tiempo real de los 21 nodos, huesos articulados y vector normal de la palma.
 4. **Telemetría Biomecánica**: Paneles independientes para mano izquierda (magenta) y derecha (cyan), con barras de flexión por dedo y detección de gestos emergentes.
 5. **Inspector de Contrato JSON**: Terminal en vivo para inspeccionar, pausar o copiar el stream de datos crudos.
