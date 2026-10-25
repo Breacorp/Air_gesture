@@ -134,6 +134,17 @@ export class HandTracker {
       const wrist = hand.landmarks[0];
       const middleMcp = hand.landmarks[9];
       const indexTip = hand.landmarks[8];
+      const thumbTip = hand.landmarks[4];
+
+      // Precision Pinch Detection: Manual Euclidean Distance between Thumb and Index Tips
+      const dx = indexTip.x - thumbTip.x;
+      const dy = indexTip.y - thumbTip.y;
+      const dz = indexTip.z - thumbTip.z;
+      const pinchDist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+      // Heuristic threshold for pinch: distance < 0.05 in normalized space
+      // Note: In a production environment, this would be calibrated per user
+      const isPinching = pinchDist < 0.05;
 
       candidates.push({
         suggestedId: `hand-${hand.handedness.toLowerCase()}`,
@@ -147,7 +158,9 @@ export class HandTracker {
           handedness: hand.handedness,
           wristPos: wrist,
           middleMcpPos: middleMcp,
-          indexTipPos: indexTip
+          indexTipPos: indexTip,
+          pinchDist: pinchDist,
+          isPinching: isPinching
         }
       });
     }
