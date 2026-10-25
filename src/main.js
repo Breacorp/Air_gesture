@@ -48,6 +48,9 @@ const btnToggleMirror = document.getElementById('btn-toggle-mirror');
 const btnSwapHands = document.getElementById('btn-swap-hands');
 const btnToggleMacos = document.getElementById('btn-toggle-macos');
 const btnExitToLanding = document.getElementById('btn-exit-to-landing');
+const welcomeBackToLanding = document.getElementById('welcome-back-to-landing');
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+if (welcomeBackToLanding && isStandalone) welcomeBackToLanding.style.display = 'none';
 if (btnExitToLanding) {
   if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) {
     btnExitToLanding.style.display = 'none';
