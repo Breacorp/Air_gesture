@@ -1213,6 +1213,7 @@ const btnGamesSound = document.getElementById('btn-games-sound');
 const btnGamesReset = document.getElementById('btn-games-reset');
 const gamesTabGroup = document.getElementById('games-tab-group');
 const gamesGuideText = document.getElementById('games-guide-text');
+const gamesMenuPanel = document.getElementById('games-menu-panel');
 
 const gameGuides = {
   pong: '🏓 Air Pong: Mano Izquierda = Paleta Izq • Mano Derecha = Paleta Der (o vs IA)',
@@ -1221,6 +1222,18 @@ const gameGuides = {
   bubble_blaster: '🫧 Bubble Blaster: Mueve el cursor y pellizca (🤏) sobre las burbujas para reventarlas',
   air_hockey: '🏒 Air Hockey: Mano izquierda paleta izquierda, mano derecha paleta derecha; evita goles'
 };
+
+let currentGamesSelection = null;
+
+function showGamesMenu() {
+  if (gamesMenuPanel) gamesMenuPanel.style.display = '';
+  if (gamesCanvasContainer) gamesCanvasContainer.style.display = 'none';
+}
+
+function showGamesCanvas() {
+  if (gamesMenuPanel) gamesMenuPanel.style.display = 'none';
+  if (gamesCanvasContainer) gamesCanvasContainer.style.display = '';
+}
 
 function toggleGamesLab(forceState = null) {
   if (!gamesLabModal) return;
@@ -1235,6 +1248,7 @@ function toggleGamesLab(forceState = null) {
   }
 
   if (nextState) {
+    if (currentGamesSelection === null) showGamesMenu(); else showGamesCanvas();
     gamesLab.start();
   } else {
     gamesLab.stop();
@@ -1262,6 +1276,23 @@ if (btnGamesReset) {
   });
 }
 
+if (gamesMenuPanel) {
+  gamesMenuPanel.addEventListener('click', (e) => {
+    const card = e.target.closest('.games-menu-card');
+    if (!card) return;
+    const game = card.dataset.game;
+    currentGamesSelection = game;
+    gamesLab.setActiveGame(game);
+    showGamesCanvas();
+    if (gamesGuideText && gameGuides[game]) gamesGuideText.textContent = gameGuides[game];
+    if (gamesTabGroup) {
+      gamesTabGroup.querySelectorAll('.btn-game-tab').forEach(b => b.classList.remove('active'));
+      const activeTab = [...gamesTabGroup.querySelectorAll('.btn-game-tab')].find(b => b.dataset.game === game);
+      if (activeTab) activeTab.classList.add('active');
+    }
+  });
+}
+
 if (gamesTabGroup) {
   gamesTabGroup.addEventListener('click', (e) => {
     const btn = e.target.closest('.btn-game-tab');
@@ -1269,7 +1300,9 @@ if (gamesTabGroup) {
     const game = btn.dataset.game;
     gamesTabGroup.querySelectorAll('.btn-game-tab').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+    currentGamesSelection = game;
     gamesLab.setActiveGame(game);
+    showGamesCanvas();
     if (gamesGuideText && gameGuides[game]) {
       gamesGuideText.textContent = gameGuides[game];
     }
