@@ -93,8 +93,8 @@ export class AirGamesLab {
       scoreL: 0,
       scoreR: 0,
       ball: { x: 400, y: 250, vx: 4, vy: 3, r: 10 },
-      paddleL: 250,
-      paddleR: 250
+      paddleL: { x: 60, y: 250 },
+      paddleR: { x: 740, y: 250 }
     };
 
     this._setupAPIListeners();
