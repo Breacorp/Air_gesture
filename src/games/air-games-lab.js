@@ -97,6 +97,13 @@ export class AirGamesLab {
       paddleR: { x: 740, y: 250 }
     };
 
+    
+    // Visual FX State
+    this.fx = {
+      screenShake: 0,
+      timeScale: 1.0,
+      bgGridOffset: 0
+    };
     this._setupAPIListeners();
     window.addEventListener('resize', () => this._resizeCanvas());
   }
@@ -296,6 +303,7 @@ export class AirGamesLab {
 
     if (!this.isPaused) {
       const now = performance.now();
+      this._applyGlobalFX();
       this.ctx.clearRect(0, 0, this.width, this.height);
 
       if (this.activeGame === null) {
@@ -1010,6 +1018,19 @@ export class AirGamesLab {
         this.ctx.stroke();
       }
       this.ctx.restore();
+    }
+  }
+
+  
+  _applyGlobalFX() {
+    if (this.fx.screenShake > 0) {
+      const shiftX = (Math.random() - 0.5) * this.fx.screenShake;
+      const shiftY = (Math.random() - 0.5) * this.fx.screenShake;
+      this.ctx.setTransform(1, 0, 0, 1, shiftX, shiftY);
+      this.fx.screenShake *= 0.9;
+      if (this.fx.screenShake < 0.1) this.fx.screenShake = 0;
+    } else {
+      this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     }
   }
 
