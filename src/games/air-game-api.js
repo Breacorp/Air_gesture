@@ -171,9 +171,25 @@ export class AirGameAPI {
         speed: hand.wrist?.speed || Math.hypot(hand.wrist?.velocity?.vx || 0, hand.wrist?.velocity?.vy || 0)
       };
 
-      const isPinching = !!(hand.pose?.isPinchThumbIndex || hand.pose?.isPinchThumbMiddle);
-      const pinchStrength = hand.pose?.pinchStrengthThumbIndex || 0;
-      const isGrabbed = !!(hand.pose?.isFist || pinchStrength > 0.75);
+      const indexTip = hand.landmarks?.[8];
+      const thumbTip = hand.landmarks?.[4];
+      const wrist = hand.landmarks?.[0];
+      const middleMcp = hand.landmarks?.[9];
+
+      let derivedPinch = false;
+      if (indexTip && thumbTip && wrist && middleMcp) {
+        const dx = indexTip.x - thumbTip.x;
+        const dy = indexTip.y - thumbTip.y;
+        const dz = indexTip.z - thumbTip.z;
+        const rawDist = Math.hypot(dx, dy, dz);
+        const handSize = Math.hypot(middleMcp.x - wrist.x, middleMcp.y - wrist.y);
+        const normDist = rawDist / (handSize || 0.1);
+        derivedPinch = normDist < 0.4; // Robusto: pellizco cercano
+      }
+
+      const isPinching = !!(hand.pose?.isPinchThumbIndex || hand.pose?.isPinchThumbMiddle || derivedPinch);
+      const pinchStrength = hand.pose?.pinchStrengthThumbIndex || (derivedPinch ? 1.0 : 0.0);
+      const isGrabbed = !!(hand.pose?.isFist || pinchStrength > 0.75 || derivedPinch);
 
       // Event: hand.move
       this.emit('hand.move', {
