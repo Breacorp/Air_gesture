@@ -20,7 +20,7 @@ export class AirGamesLab {
     this.canvas.className = 'air-games-canvas';
     this.container.appendChild(this.canvas);
 
-    this.activeGame = null; // null => submenu inicial
+    this.activeGame = 'pong'; // default game while submenu is shown
     this.isRunning = false;
     this.isPaused = false;
 
