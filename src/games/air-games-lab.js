@@ -89,6 +89,14 @@ export class AirGamesLab {
       gameOver: false
     };
 
+    this.airHockey = {
+      scoreL: 0,
+      scoreR: 0,
+      ball: { x: 400, y: 250, vx: 4, vy: 3, r: 10 },
+      paddleL: 250,
+      paddleR: 250
+    };
+
     this._setupAPIListeners();
     window.addEventListener('resize', () => this._resizeCanvas());
   }
@@ -235,7 +243,7 @@ export class AirGamesLab {
     ctx.fillStyle = '#cbd5e1';
     ctx.font = '16px sans-serif';
     ctx.fillText('Seleccioná un juego usando las pestañas de arriba', this.width / 2, this.height * 0.35);
-    const games = ['pong', 'fruit_ninja', 'basketball', 'bubble_blaster'];
+    const games = ['pong', 'fruit_ninja', 'basketball', 'bubble_blaster', 'air_hockey'];
     games.forEach((g, i) => {
       const x = this.width / 2;
       const y = this.height * 0.45 + i * 50;
@@ -271,6 +279,13 @@ export class AirGamesLab {
       this.bubbleBlaster.bubbles = [];
       this.bubbleBlaster.lastSpawn = performance.now();
       this.bubbleBlaster.gameOver = false;
+    } else if (this.activeGame === 'air_hockey') {
+      this.airHockey.scoreL = 0;
+      this.airHockey.scoreR = 0;
+      this.airHockey.ball.x = this.width / 2;
+      this.airHockey.ball.y = this.height / 2;
+      this.airHockey.ball.vx = 4 * (Math.random() > 0.5 ? 1 : -1);
+      this.airHockey.ball.vy = 3;
     }
   }
 
@@ -293,6 +308,8 @@ export class AirGamesLab {
         this._updateAndRenderBasketball();
       } else if (this.activeGame === 'bubble_blaster') {
         this._updateAndRenderBubbleBlaster(now);
+      } else if (this.activeGame === 'air_hockey') {
+        this._updateAndRenderAirHockey(now);
       }
 
       this._renderParticles();
@@ -848,6 +865,64 @@ export class AirGamesLab {
     ctx.font = 'bold 24px sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText(`Score: ${this.bubbleBlaster.score}`, 20, 40);
+  }
+
+  _updateAndRenderAirHockey(now) {
+    const ctx = this.ctx;
+    const h = this.airHockey;
+    ctx.fillStyle = '#0b0b10';
+    ctx.fillRect(0, 0, this.width, this.height);
+
+    // paddles follow hands
+    const lc = this.handCursors.left; const rc = this.handCursors.right;
+    if (lc && lc.active) h.paddleL = Math.max(60, Math.min(this.height - 60, lc.y));
+    if (rc && rc.active) h.paddleR = Math.max(60, Math.min(this.height - 60, rc.y));
+    // fallback center
+    if (!lc || !lc.active) h.paddleL = this.height / 2;
+    if (!rc || !rc.active) h.paddleR = this.height / 2;
+
+    // ball move
+    h.ball.x += h.ball.vx; h.ball.y += h.ball.vy;
+    if (h.ball.y - h.ball.r < 0 || h.ball.y + h.ball.r > this.height) h.ball.vy *= -1;
+
+    // paddle collisions
+    const paddleW = 12, paddleH = 90;
+    // left
+    if (h.ball.x - h.ball.r < 40 + paddleW && h.ball.y > h.paddleL - paddleH/2 && h.ball.y < h.paddleL + paddleH/2 && h.ball.vx < 0) {
+      h.ball.vx = Math.abs(h.ball.vx) + 0.5;
+    }
+    // right
+    if (h.ball.x + h.ball.r > this.width - 40 - paddleW && h.ball.y > h.paddleR - paddleH/2 && h.ball.y < h.paddleR + paddleH/2 && h.ball.vx > 0) {
+      h.ball.vx = -Math.abs(h.ball.vx) - 0.5;
+    }
+
+    // goals
+    if (h.ball.x < 0) { h.scoreR++; h.ball.x = this.width/2; h.ball.y = this.height/2; h.ball.vx = 4; h.ball.vy = 3; }
+    if (h.ball.x > this.width) { h.scoreL++; h.ball.x = this.width/2; h.ball.y = this.height/2; h.ball.vx = -4; h.ball.vy = 3; }
+
+    // draw midline
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.setLineDash([8,8]);
+    ctx.beginPath(); ctx.moveTo(this.width/2,0); ctx.lineTo(this.width/2,this.height); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // draw paddles
+    ctx.fillStyle = '#00f5d4';
+    ctx.fillRect(20, h.paddleL - paddleH/2, paddleW, paddleH);
+    ctx.fillStyle = '#ff007f';
+    ctx.fillRect(this.width - 20 - paddleW, h.paddleR - paddleH/2, paddleW, paddleH);
+
+    // ball
+    ctx.beginPath();
+    ctx.arc(h.ball.x, h.ball.y, h.ball.r, 0, Math.PI*2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+
+    // score
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 32px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${h.scoreL}  -  ${h.scoreR}`, this.width/2, 50);
   }
 
   _renderParticles() {
