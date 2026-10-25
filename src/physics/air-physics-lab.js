@@ -412,7 +412,7 @@ export class AirPhysicsLab {
       if (!this.grabbedBody) {
         // Find nearest dynamic body within grab reach (< 0.55m)
         let nearestItem = null;
-        let minDist = 0.55;
+        let minDist = 0.75;  // Larger grab radius for reliable grasping
 
         for (const item of this.bodies) {
           const bodyPos = new THREE.Vector3(item.body.position.x, item.body.position.y, item.body.position.z);
@@ -526,7 +526,7 @@ export class AirPhysicsLab {
       if (!this.grabbedBody) {
         // Find body nearest to midPoint between both hands
         let nearestItem = null;
-        let minDist = 0.7;
+        let minDist = 0.8;  // Easier bimanual grab
 
         for (const item of this.bodies) {
           const bodyPos = new THREE.Vector3(item.body.position.x, item.body.position.y, item.body.position.z);
