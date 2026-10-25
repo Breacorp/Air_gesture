@@ -423,13 +423,13 @@ export class AirGamesLab {
       this.ctx.fillText(`🔥 RALLY x${this.pong.rallyStreak}`, this.width / 2, 90);
     }
 
-    // Left Paddle (Neon Magenta)
+    // Left Paddle (Pure White)
     this.ctx.fillStyle = '#ff007f';
     this.ctx.shadowColor = '#ff007f';
-    this.ctx.shadowBlur = 16;
+    this.ctx.shadowBlur = 0;
     this.ctx.fillRect(lPaddleX, lp.y - lp.height / 2, lp.width, lp.height);
 
-    // Right Paddle (Cyber Cyan)
+    // Right Paddle (Pure White)
     this.ctx.fillStyle = '#00f5d4';
     this.ctx.shadowColor = '#00f5d4';
     this.ctx.fillRect(rPaddleX, rp.y - rp.height / 2, rp.width, rp.height);
@@ -437,7 +437,7 @@ export class AirGamesLab {
     // Ball
     this.ctx.fillStyle = '#ffffff';
     this.ctx.shadowColor = '#00f5d4';
-    this.ctx.shadowBlur = 18;
+    this.ctx.shadowBlur = 0;
     this.ctx.beginPath();
     this.ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
     this.ctx.fill();
