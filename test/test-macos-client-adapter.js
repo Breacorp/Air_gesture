@@ -41,7 +41,7 @@ try {
   socket.readyState = MockWebSocket.OPEN;
   socket.onopen();
   assert.equal(adapter.isConnected, true);
-  assert.deepEqual(statuses.at(-1), { connected: true, connecting: false });
+  assert.deepEqual(statuses.at(-1), { connected: true, connecting: true, authenticated: false });
 
   socket.onerror(new Event('error'));
   assert.equal(adapter.isConnected, false);

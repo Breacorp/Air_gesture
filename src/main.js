@@ -164,13 +164,19 @@ function showFailsafeBanner(text) {
   }, 3200);
 }
 
-macosAdapter.onStatusChange = ({ connected, connecting, error }) => {
+macosAdapter.onStatusChange = ({ connected, connecting, authenticated, error }) => {
   if (btnToggleMacos) {
     btnToggleMacos.disabled = Boolean(connecting);
   }
 
   if (connecting) {
     if (macosLabel) macosLabel.textContent = 'Conectando…';
+    updateSystemStatus('off');
+    return;
+  }
+
+  if (connected && authenticated === false && !connecting) {
+    if (macosLabel) macosLabel.textContent = 'Autenticando…';
     updateSystemStatus('off');
     return;
   }
