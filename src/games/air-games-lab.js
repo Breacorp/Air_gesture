@@ -20,7 +20,7 @@ export class AirGamesLab {
     this.canvas.className = 'air-games-canvas';
     this.container.appendChild(this.canvas);
 
-    this.activeGame = null; // null => menu inicial
+    this.activeGame = 'pong'; // Default to Air Pong; tabs switch games
     this.isRunning = false;
     this.isPaused = false;
 
