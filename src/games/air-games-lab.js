@@ -870,59 +870,88 @@ export class AirGamesLab {
   _updateAndRenderAirHockey(now) {
     const ctx = this.ctx;
     const h = this.airHockey;
-    ctx.fillStyle = '#0b0b10';
+    ctx.fillStyle = '#0b1a2a';
     ctx.fillRect(0, 0, this.width, this.height);
 
-    // paddles follow hands
+    // Table markings
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(10, 10, this.width-20, this.height-20);
+    ctx.beginPath(); ctx.moveTo(this.width/2, 10); ctx.lineTo(this.width/2, this.height-10); ctx.stroke();
+    ctx.beginPath(); ctx.arc(this.width/2, this.height/2, 40, 0, Math.PI*2); ctx.stroke();
+
+    const paddleW = 16, paddleH = 80;
     const lc = this.handCursors.left; const rc = this.handCursors.right;
-    if (lc && lc.active) h.paddleL = Math.max(60, Math.min(this.height - 60, lc.y));
-    if (rc && rc.active) h.paddleR = Math.max(60, Math.min(this.height - 60, rc.y));
-    // fallback center
-    if (!lc || !lc.active) h.paddleL = this.height / 2;
-    if (!rc || !rc.active) h.paddleR = this.height / 2;
 
-    // ball move
+    // Map hand position to player half (2D movement for push)
+    const targetLx = lc && lc.active ? Math.max(20, Math.min(this.width/2-40, lc.x)) : 60;
+    const targetLy = lc && lc.active ? Math.max(paddleH/2, Math.min(this.height - paddleH/2, lc.y)) : this.height/2;
+    const targetRx = rc && rc.active ? Math.max(this.width/2+40, Math.min(this.width-20-paddleW, rc.x)) : this.width-60-paddleW;
+    const targetRy = rc && rc.active ? Math.max(paddleH/2, Math.min(this.height - paddleH/2, rc.y)) : this.height/2;
+
+    // Smooth follow to allow push
+    h.paddleL.x += (targetLx - h.paddleL.x) * 0.25;
+    h.paddleL.y += (targetLy - h.paddleL.y) * 0.25;
+    h.paddleR.x += (targetRx - h.paddleR.x) * 0.25;
+    h.paddleR.y += (targetRy - h.paddleR.y) * 0.25;
+    if (h.paddleL.x === undefined) { h.paddleL.x = 60; h.paddleL.y = this.height/2; h.paddleR.x = this.width-76; h.paddleR.y = this.height/2; }
+
+    // puck physics
     h.ball.x += h.ball.vx; h.ball.y += h.ball.vy;
-    if (h.ball.y - h.ball.r < 0 || h.ball.y + h.ball.r > this.height) h.ball.vy *= -1;
-
-    // paddle collisions
-    const paddleW = 12, paddleH = 90;
-    // left
-    if (h.ball.x - h.ball.r < 40 + paddleW && h.ball.y > h.paddleL - paddleH/2 && h.ball.y < h.paddleL + paddleH/2 && h.ball.vx < 0) {
-      h.ball.vx = Math.abs(h.ball.vx) + 0.5;
+    // friction
+    h.ball.vx *= 0.995; h.ball.vy *= 0.995;
+    // walls
+    if (h.ball.y - h.ball.r < 10) { h.ball.y = 10 + h.ball.r; h.ball.vy = Math.abs(h.ball.vy)*0.9; }
+    if (h.ball.y + h.ball.r > this.height-10) { h.ball.y = this.height-10 - h.ball.r; h.ball.vy = -Math.abs(h.ball.vy)*0.9; }
+    // left/right goal detection (open goals)
+    if (h.ball.x - h.ball.r < 10) {
+      // left goal area
+      if (Math.abs(h.ball.y - this.height/2) < 60) { h.scoreR++; h.ball.x=this.width/2; h.ball.y=this.height/2; h.ball.vx=3; h.ball.vy=2; }
+      else { h.ball.x = 10 + h.ball.r; h.ball.vx = Math.abs(h.ball.vx)*0.9; }
     }
-    // right
-    if (h.ball.x + h.ball.r > this.width - 40 - paddleW && h.ball.y > h.paddleR - paddleH/2 && h.ball.y < h.paddleR + paddleH/2 && h.ball.vx > 0) {
-      h.ball.vx = -Math.abs(h.ball.vx) - 0.5;
+    if (h.ball.x + h.ball.r > this.width-10) {
+      if (Math.abs(h.ball.y - this.height/2) < 60) { h.scoreL++; h.ball.x=this.width/2; h.ball.y=this.height/2; h.ball.vx=-3; h.ball.vy=2; }
+      else { h.ball.x = this.width-10 - h.ball.r; h.ball.vx = -Math.abs(h.ball.vx)*0.9; }
     }
 
-    // goals
-    if (h.ball.x < 0) { h.scoreR++; h.ball.x = this.width/2; h.ball.y = this.height/2; h.ball.vx = 4; h.ball.vy = 3; }
-    if (h.ball.x > this.width) { h.scoreL++; h.ball.x = this.width/2; h.ball.y = this.height/2; h.ball.vx = -4; h.ball.vy = 3; }
-
-    // draw midline
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-    ctx.setLineDash([8,8]);
-    ctx.beginPath(); ctx.moveTo(this.width/2,0); ctx.lineTo(this.width/2,this.height); ctx.stroke();
-    ctx.setLineDash([]);
+    // paddle collisions with push impulse
+    const checkPaddle = (p) => {
+      if (h.ball.x + h.ball.r > p.x && h.ball.x - h.ball.r < p.x + paddleW &&
+          h.ball.y + h.ball.r > p.y - paddleH/2 && h.ball.y - h.ball.r < p.y + paddleH/2) {
+        // push
+        const nx = (h.ball.x - (p.x + paddleW/2)) / (paddleW/2);
+        const ny = (h.ball.y - p.y) / (paddleH/2);
+        const speed = Math.hypot(h.ball.vx, h.ball.vy) + 1.5;
+        h.ball.vx = nx * speed;
+        h.ball.vy = ny * speed;
+        // ensure exit
+        if (p === h.paddleL) h.ball.x = p.x + paddleW + h.ball.r + 1;
+        else h.ball.x = p.x - h.ball.r - 1;
+      }
+    };
+    checkPaddle(h.paddleL); checkPaddle(h.paddleR);
 
     // draw paddles
     ctx.fillStyle = '#00f5d4';
-    ctx.fillRect(20, h.paddleL - paddleH/2, paddleW, paddleH);
+    ctx.fillRect(h.paddleL.x, h.paddleL.y - paddleH/2, paddleW, paddleH);
     ctx.fillStyle = '#ff007f';
-    ctx.fillRect(this.width - 20 - paddleW, h.paddleR - paddleH/2, paddleW, paddleH);
+    ctx.fillRect(h.paddleR.x, h.paddleR.y - paddleH/2, paddleW, paddleH);
 
-    // ball
+    // puck
     ctx.beginPath();
     ctx.arc(h.ball.x, h.ball.y, h.ball.r, 0, Math.PI*2);
     ctx.fillStyle = '#fff';
     ctx.fill();
+    ctx.strokeStyle = '#999';
+    ctx.stroke();
 
     // score
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 32px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(`${h.scoreL}  -  ${h.scoreR}`, this.width/2, 50);
+    ctx.font = '14px sans-serif';
+    ctx.fillText('Objetivo: pasar el disco por el arco del rival (centro)', this.width/2, this.height-12);
   }
 
   _renderParticles() {
