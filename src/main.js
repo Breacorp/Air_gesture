@@ -47,6 +47,16 @@ const btnCalibrateZ = document.getElementById('btn-calibrate-z');
 const btnToggleMirror = document.getElementById('btn-toggle-mirror');
 const btnSwapHands = document.getElementById('btn-swap-hands');
 const btnToggleMacos = document.getElementById('btn-toggle-macos');
+const btnExitToLanding = document.getElementById('btn-exit-to-landing');
+if (btnExitToLanding) {
+  if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true) {
+    btnExitToLanding.style.display = 'none';
+  } else {
+    btnExitToLanding.addEventListener('click', () => {
+      window.location.href = '/';
+    });
+  }
+}
 const macosLabel = document.getElementById('macos-label');
 const btnToggleJson = document.getElementById('btn-toggle-json');
 const jsonDrawer = document.getElementById('json-drawer');
