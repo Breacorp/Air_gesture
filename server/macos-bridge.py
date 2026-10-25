@@ -305,8 +305,19 @@ async def handler(websocket):
         return
 
     session = Session(websocket=websocket)
-    # hello (no handshake_ok until auth)
-    await websocket.send(json.dumps({"type": "hello", "requiresAuth": True}))
+    origin_norm = normalize_origin(origin)
+    trusted_origin = origin is not None and origin_allowed(origin)
+    if trusted_origin:
+        session.authenticated = True
+        await websocket.send(json.dumps({
+            "type": "handshake_ok",
+            "screen": dispatcher.bounds,
+            "platform": "darwin",
+            "capabilities": ["mouse", "keyboard", "scroll", "hotkeys"],
+        }))
+        print(f"[macOS Input Engine] Trusted origin authenticated: {origin_norm}")
+    else:
+        await websocket.send(json.dumps({"type": "hello", "requiresAuth": True}))
 
     try:
         async for message in websocket:
@@ -327,6 +338,14 @@ async def handler(websocket):
 
             # Auth gate
             if msg_type == "auth":
+                if session.authenticated:
+                    await websocket.send(json.dumps({
+                        "type": "handshake_ok",
+                        "screen": dispatcher.bounds,
+                        "platform": "darwin",
+                        "capabilities": ["mouse", "keyboard", "scroll", "hotkeys"],
+                    }))
+                    continue
                 tok = data.get("token")
                 if tok and secrets.compare_digest(str(tok), AUTH_TOKEN):
                     session.authenticated = True

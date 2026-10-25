@@ -11,13 +11,6 @@ export class MacOSClientAdapter extends OSAdapter {
     super('macOS CoreGraphics Input Engine');
     this.wsUrl = wsUrl;
     this.token = token || (typeof localStorage !== 'undefined' ? localStorage.getItem('airgesture_bridge_token') || '' : '');
-    if (!this.token && typeof window !== 'undefined' && typeof window.prompt === 'function') {
-      const prompted = window.prompt('Token del daemon macOS (se muestra al iniciar macos-bridge.py):');
-      if (prompted) {
-        this.token = prompted.trim();
-        try { localStorage.setItem('airgesture_bridge_token', this.token); } catch (e) {}
-      }
-    }
     this.ws = null;
     this.isConnected = false;
     this.isAuthenticated = false;
@@ -46,10 +39,12 @@ export class MacOSClientAdapter extends OSAdapter {
         this.connectionError = null;
         this.onStatusChange?.({ connected: true, connecting: true, authenticated: false });
         console.log('[macOS Input Adapter] Connected to native Quartz daemon; authenticating');
-        try {
-          this.ws.send(JSON.stringify({ type: 'auth', token: this.token }));
-        } catch (e) {
-          console.error('[macOS Input Adapter] Auth send failed:', e);
+        if (this.token) {
+          try {
+            this.ws.send(JSON.stringify({ type: 'auth', token: this.token }));
+          } catch (e) {
+            console.error('[macOS Input Adapter] Auth send failed:', e);
+          }
         }
       };
 
