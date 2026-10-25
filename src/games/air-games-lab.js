@@ -20,7 +20,7 @@ export class AirGamesLab {
     this.canvas.className = 'air-games-canvas';
     this.container.appendChild(this.canvas);
 
-    this.activeGame = 'pong'; // 'pong' | 'fruit_ninja' | 'basketball'
+    this.activeGame = null; // null => menu inicial
     this.isRunning = false;
     this.isPaused = false;
 
@@ -216,6 +216,29 @@ export class AirGamesLab {
     return this.isPaused;
   }
 
+  _renderGameMenu(now) {
+    const ctx = this.ctx;
+    ctx.fillStyle = 'rgba(10, 10, 16, 0.85)';
+    ctx.fillRect(0, 0, this.width, this.height);
+    ctx.fillStyle = '#00f5d4';
+    ctx.font = 'bold 36px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Air Games Lab', this.width / 2, this.height * 0.25);
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '16px sans-serif';
+    ctx.fillText('Seleccioná un juego usando las pestañas de arriba', this.width / 2, this.height * 0.35);
+    const games = ['pong', 'fruit_ninja', 'basketball'];
+    games.forEach((g, i) => {
+      const x = this.width / 2;
+      const y = this.height * 0.45 + i * 50;
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      ctx.fillRect(x - 160, y - 24, 320, 40);
+      ctx.fillStyle = '#fff';
+      ctx.font = '18px sans-serif';
+      ctx.fillText(g.replace('_', ' ').toUpperCase(), x, y + 6);
+    });
+  }
+
   resetCurrentGame() {
     if (this.activeGame === 'pong') {
       this.pong.ball.x = this.width / 2;
@@ -247,7 +270,9 @@ export class AirGamesLab {
       const now = performance.now();
       this.ctx.clearRect(0, 0, this.width, this.height);
 
-      if (this.activeGame === 'pong') {
+      if (this.activeGame === null) {
+        this._renderGameMenu(now);
+      } else if (this.activeGame === 'pong') {
         this._updateAndRenderPong();
       } else if (this.activeGame === 'fruit_ninja') {
         this._updateAndRenderFruitNinja(now);
