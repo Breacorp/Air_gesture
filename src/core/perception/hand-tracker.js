@@ -13,6 +13,11 @@ export class HandTracker {
     this.mirror = options.mirror !== undefined ? options.mirror : true;
     this.swapHands = options.swapHands || false;
     this.numHands = options.numHands || 2;
+    this.pinchStates = {
+      left: { smoothDist: 0.1, active: false },
+      right: { smoothDist: 0.1, active: false }
+    };
+
     this._initializationPromise = null;
   }
 
@@ -137,14 +142,32 @@ export class HandTracker {
       const thumbTip = hand.landmarks[4];
 
       // Precision Pinch Detection: Manual Euclidean Distance between Thumb and Index Tips
+
       const dx = indexTip.x - thumbTip.x;
       const dy = indexTip.y - thumbTip.y;
       const dz = indexTip.z - thumbTip.z;
-      const pinchDist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      const rawDist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      
+      // 1. Normalize distance by hand size (Wrist to Middle MCP) to handle depth/size
+      const handSize = Math.hypot(middleMcp.x - wrist.x, middleMcp.y - wrist.y);
+      const normDist = rawDist / (handSize || 0.1);
+      
+      // 2. Exponential Moving Average (EMA) to remove jitter
+      const side = hand.handedness.toLowerCase();
+      const state = this.pinchStates[side] || { smoothDist: normDist, active: false };
+      state.smoothDist = (normDist * 0.4) + (state.smoothDist * 0.6);
+      
+      // 3. Hysteresis: Different thresholds for activation and release
+      if (!state.active && state.smoothDist < 0.4) {
+        state.active = true;
+      } else if (state.active && state.smoothDist > 0.6) {
+        state.active = false;
+      }
+      this.pinchStates[side] = state;
+      
+      const isPinching = state.active;
+      const pinchDist = rawDist; // Keep for telemetry
 
-      // Heuristic threshold for pinch: distance < 0.05 in normalized space
-      // Note: In a production environment, this would be calibrated per user
-      const isPinching = pinchDist < 0.05;
 
       candidates.push({
         suggestedId: `hand-${hand.handedness.toLowerCase()}`,
