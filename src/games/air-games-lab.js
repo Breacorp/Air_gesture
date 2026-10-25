@@ -81,6 +81,14 @@ export class AirGamesLab {
       }
     };
 
+    // --- GAME 4: BUBBLE BLASTER STATE ---
+    this.bubbleBlaster = {
+      score: 0,
+      bubbles: [],
+      lastSpawn: performance.now(),
+      gameOver: false
+    };
+
     this._setupAPIListeners();
     window.addEventListener('resize', () => this._resizeCanvas());
   }
@@ -227,7 +235,7 @@ export class AirGamesLab {
     ctx.fillStyle = '#cbd5e1';
     ctx.font = '16px sans-serif';
     ctx.fillText('Seleccioná un juego usando las pestañas de arriba', this.width / 2, this.height * 0.35);
-    const games = ['pong', 'fruit_ninja', 'basketball'];
+    const games = ['pong', 'fruit_ninja', 'basketball', 'bubble_blaster'];
     games.forEach((g, i) => {
       const x = this.width / 2;
       const y = this.height * 0.45 + i * 50;
@@ -258,6 +266,11 @@ export class AirGamesLab {
       this.basketball.streak = 0;
       this.basketball.shotsTaken = 0;
       this._resetBasketball();
+    } else if (this.activeGame === 'bubble_blaster') {
+      this.bubbleBlaster.score = 0;
+      this.bubbleBlaster.bubbles = [];
+      this.bubbleBlaster.lastSpawn = performance.now();
+      this.bubbleBlaster.gameOver = false;
     }
   }
 
@@ -278,6 +291,8 @@ export class AirGamesLab {
         this._updateAndRenderFruitNinja(now);
       } else if (this.activeGame === 'basketball') {
         this._updateAndRenderBasketball();
+      } else if (this.activeGame === 'bubble_blaster') {
+        this._updateAndRenderBubbleBlaster(now);
       }
 
       this._renderParticles();
@@ -779,6 +794,60 @@ export class AirGamesLab {
       alpha: 1.0,
       decay: 0.02
     });
+  }
+
+  _updateAndRenderBubbleBlaster(now) {
+    const ctx = this.ctx;
+    ctx.fillStyle = '#0b0b10';
+    ctx.fillRect(0, 0, this.width, this.height);
+
+    // spawn
+    if (now - this.bubbleBlaster.lastSpawn > 900) {
+      this.bubbleBlaster.lastSpawn = now;
+      const radius = 20 + Math.random() * 20;
+      this.bubbleBlaster.bubbles.push({
+        x: radius + Math.random() * (this.width - radius * 2),
+        y: this.height + radius,
+        vy: -1.5 - Math.random() * 2,
+        radius,
+        color: `hsl(${Math.random() * 360}, 80%, 60%)`,
+        popped: false
+      });
+    }
+
+    // update + draw + pop
+    this.bubbleBlaster.bubbles.forEach(b => {
+      b.y += b.vy;
+    });
+    this.bubbleBlaster.bubbles = this.bubbleBlaster.bubbles.filter(b => b.y + b.radius > 0);
+
+    // collision with active pinching cursors
+    const cursors = Object.values(this.handCursors || {}).filter(c => c.active);
+    cursors.forEach(c => {
+      this.bubbleBlaster.bubbles.forEach(b => {
+        if (c.pinching && Math.hypot(c.x - b.x, c.y - b.y) < b.radius + 10) {
+          b.popped = true;
+          this.bubbleBlaster.score += 10;
+          gameAudio && gameAudio.playPop && gameAudio.playPop();
+        }
+      });
+    });
+    this.bubbleBlaster.bubbles = this.bubbleBlaster.bubbles.filter(b => !b.popped);
+
+    this.bubbleBlaster.bubbles.forEach(b => {
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+      ctx.fillStyle = b.color;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.stroke();
+    });
+
+    // score
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 24px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Score: ${this.bubbleBlaster.score}`, 20, 40);
   }
 
   _renderParticles() {

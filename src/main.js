@@ -1217,7 +1217,8 @@ const gamesGuideText = document.getElementById('games-guide-text');
 const gameGuides = {
   pong: '🏓 Air Pong: Mano Izquierda = Paleta Izq • Mano Derecha = Paleta Der (o vs IA)',
   fruit_ninja: '🍉 Fruit Ninja: Mueve tu mano a alta velocidad para cortar frutas con el filo espacial • ¡Evita las bombas!',
-  basketball: '🏀 Air Basketball: Acerca la mano a la pelota y pellizca (🤏) para agarrar • Lanza hacia el aro'
+  basketball: '🏀 Air Basketball: Acerca la mano a la pelota y pellizca (🤏) para agarrar • Lanza hacia el aro',
+  bubble_blaster: '🫧 Bubble Blaster: Mueve el cursor y pellizca (🤏) sobre las burbujas para reventarlas'
 };
 
 function toggleGamesLab(forceState = null) {
