@@ -1,5 +1,5 @@
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://rcskjdksimcfkdjzxara.supabase.co';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_p8lypcqNqRWaOKZ-l1teqQ_JjKrZ9Mo';
 
 export function saveToken(token) {
   if (!token) return;
@@ -39,7 +39,8 @@ export async function loginEmail(email, password) {
     headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
     body: JSON.stringify({ email, password })
   });
-  const data = await res.json();
+  let data = {};
+  try { data = await res.json(); } catch (e) { throw new Error('Respuesta inválida del servidor'); }
   if (!res.ok) throw new Error(data.error_description || data.msg || 'Login failed');
   saveToken(data.access_token);
   return data.access_token;
@@ -70,5 +71,5 @@ export async function getUser() {
     headers: { 'Authorization': `Bearer ${token}`, 'apikey': SUPABASE_ANON_KEY }
   });
   if (!res.ok) return null;
-  return res.json();
+  try { return await res.json(); } catch (e) { return null; }
 }
