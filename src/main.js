@@ -1259,6 +1259,11 @@ if (authForm) {
 // Boot SSO
 handleCallback();
 refreshAuthUI();
+const params = new URLSearchParams(window.location.search);
+if (params.get('auth') === '1') {
+  openAuthModal();
+  history.replaceState(null, '', window.location.pathname);
+}
 
 // ============================================================
 // AIR GAMES LAB - SPATIAL GAMING PLATFORM UI BINDINGS
