@@ -143,10 +143,13 @@ export class AirGameAPI {
       let posX = 0.5;
       let posY = 0.5;
 
-      if (hand.screenPoints && hand.screenPoints.length > 9) {
-        posX = hand.screenPoints[9].u;
-        posY = hand.screenPoints[9].v;
-      } else if (hand.screenPoints && hand.screenPoints.length > 0) {
+      if (hand.landmarks && hand.landmarks.length > 8) {
+        posX = hand.landmarks[8].x; // Index fingertip for precise pointer
+        posY = hand.landmarks[8].y;
+      } else if (hand.screenPoints && hand.screenPoints.length > 8) {
+        posX = hand.screenPoints[8].u;
+        posY = hand.screenPoints[8].v;
+      } else if (hand.screenPoints && hand.screenPoints.length > 9) {
         posX = hand.screenPoints[0].u;
         posY = hand.screenPoints[0].v;
       } else if (hand.palm?.position) {
