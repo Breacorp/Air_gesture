@@ -68,6 +68,7 @@
         </label>
 
         <div class="nav-actions">
+          <button id="btn-auth" class="btn btn-secondary" type="button">Ingresar</button>
           <button id="btn-exit-to-landing" class="btn btn-secondary" type="button" title="Volver a la landing" aria-label="Volver a la landing">
             <span>← Salir</span>
           </button>
@@ -1126,5 +1127,20 @@
 
     <script type="module" src="/src/offline-ui.js"></script>
     <script type="module" src="/src/main.js"></script>
+  <div id="auth-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <h2 class="modal-title">Ingresar a Moderno Tech</h2>
+      <form id="auth-form">
+        <input type="email" id="auth-email" class="form-input" placeholder="Email" required />
+        <input type="password" id="auth-password" class="form-input" placeholder="Contraseña" required />
+        <div class="modal-actions">
+          <button type="submit" class="btn btn-primary">Ingresar con Email</button>
+          <button type="button" id="btn-auth-google" class="btn btn-secondary">Google</button>
+          <button type="button" id="btn-auth-close" class="btn btn-secondary">Cerrar</button>
+        </div>
+      </form>
+      <div id="auth-status" class="auth-status"></div>
+    </div>
+  </div>
   </body>
 </html>

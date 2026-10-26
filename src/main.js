@@ -29,6 +29,7 @@ import { SpatialDirectTouch } from './interaction/spatial-direct-touch.js';
 import { AirPhysicsLab } from './physics/air-physics-lab.js';
 import { AirGameAPI } from './games/air-game-api.js';
 import { AirGamesLab } from './games/air-games-lab.js';
+import { loginEmail, loginGoogle, logout, restoreToken, getUser, handleCallback } from './auth/sso.js';
 import { gameAudio } from './games/air-game-audio.js';
 import { FullSensorView } from './render/full-sensor-view.js';
 
@@ -1202,6 +1203,62 @@ if (btnPhysicsClear) {
     physicsLab.clearAllObjects();
   });
 }
+
+// ============================================================
+// AUTH / SSO BINDINGS
+// ============================================================
+const btnAuth = document.getElementById('btn-auth');
+const authModal = document.getElementById('auth-modal');
+const authForm = document.getElementById('auth-form');
+const authStatus = document.getElementById('auth-status');
+const btnAuthGoogle = document.getElementById('btn-auth-google');
+const btnAuthClose = document.getElementById('btn-auth-close');
+
+async function refreshAuthUI() {
+  const token = localStorage.getItem('jwt') || restoreToken();
+  if (token) {
+    const user = await getUser();
+    if (user) {
+      if (btnAuth) { btnAuth.textContent = user.email ? user.email.split('@')[0] : 'Cuenta'; btnAuth.onclick = () => { if (confirm('Cerrar sesión?')) { logout(); refreshAuthUI(); } }; }
+    } else {
+      logout();
+      if (btnAuth) { btnAuth.textContent = 'Ingresar'; btnAuth.onclick = openAuthModal; }
+    }
+  } else {
+    if (btnAuth) { btnAuth.textContent = 'Ingresar'; btnAuth.onclick = openAuthModal; }
+  }
+}
+
+function openAuthModal() {
+  if (authModal) authModal.classList.remove('hidden');
+}
+function closeAuthModal() {
+  if (authModal) authModal.classList.add('hidden');
+  if (authStatus) authStatus.textContent = '';
+}
+
+if (btnAuth) btnAuth.addEventListener('click', openAuthModal);
+if (btnAuthClose) btnAuthClose.addEventListener('click', closeAuthModal);
+if (btnAuthGoogle) btnAuthGoogle.addEventListener('click', () => loginGoogle());
+
+if (authForm) {
+  authForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('auth-email').value;
+    const pass = document.getElementById('auth-password').value;
+    try {
+      await loginEmail(email, pass);
+      closeAuthModal();
+      refreshAuthUI();
+    } catch (err) {
+      if (authStatus) authStatus.textContent = err.message;
+    }
+  });
+}
+
+// Boot SSO
+handleCallback();
+refreshAuthUI();
 
 // ============================================================
 // AIR GAMES LAB - SPATIAL GAMING PLATFORM UI BINDINGS
