@@ -95,7 +95,7 @@ export class AirPhysicsLab {
     this.labGroup.add(this.floorMesh);
 
     // Floor Grid Line Helper
-    const grid = new THREE.GridHelper(4.2, 14, 0x00f5d4, 0x1f293d);
+    const grid = new THREE.GridHelper(4.2, 14, 0xffffff, 0x1f293d);
     grid.position.y = -1.14;
     this.labGroup.add(grid);
 
@@ -145,14 +145,14 @@ export class AirPhysicsLab {
     this.clearAllObjects();
 
     // Spawn 2 Cubes, 2 Spheres, 1 Cylinder in an appealing holographic stack
-    this.spawnCube(-0.6, -0.4, 0, 0.28, 0x00f5d4);
+    this.spawnCube(-0.6, -0.4, 0, 0.28, 0xffffff);
     this.spawnCube(0.6, -0.4, 0, 0.28, 0x00bbf9);
-    this.spawnSphere(0, 0.2, 0, 0.22, 0xff007f);
+    this.spawnSphere(0, 0.2, 0, 0.22, 0xcccccc);
     this.spawnSphere(-0.4, 0.6, -0.2, 0.18, 0xffd166);
     this.spawnCylinder(0.4, 0.5, 0.2, 0.16, 0.32, 0xa100ff);
   }
 
-  spawnCube(x = 0, y = 0.5, z = 0, size = 0.28, color = 0x00f5d4) {
+  spawnCube(x = 0, y = 0.5, z = 0, size = 0.28, color = 0xffffff) {
     const halfSize = size / 2;
     const geo = new THREE.BoxGeometry(size, size, size);
     const mat = this._createObjectMaterial(color);
@@ -177,7 +177,7 @@ export class AirPhysicsLab {
     return entry;
   }
 
-  spawnSphere(x = 0, y = 0.5, z = 0, radius = 0.22, color = 0xff007f) {
+  spawnSphere(x = 0, y = 0.5, z = 0, radius = 0.22, color = 0xcccccc) {
     const geo = new THREE.SphereGeometry(radius, 24, 24);
     const mat = this._createObjectMaterial(color);
     const mesh = new THREE.Mesh(geo, mat);

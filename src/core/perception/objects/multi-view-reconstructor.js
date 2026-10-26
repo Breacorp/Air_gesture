@@ -117,7 +117,7 @@ export class MultiViewReconstructor {
       });
     } else {
       material = new THREE.MeshStandardMaterial({
-        color: 0x00f5d4,
+        color: 0xffffff,
         roughness: 0.3,
         metalness: 0.8,
         wireframe: viewsCount < this.minViewsForSolidTwin

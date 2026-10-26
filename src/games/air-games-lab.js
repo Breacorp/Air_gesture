@@ -243,7 +243,7 @@ export class AirGamesLab {
     const ctx = this.ctx;
     ctx.fillStyle = 'rgba(10, 10, 16, 0.85)';
     ctx.fillRect(0, 0, this.width, this.height);
-    ctx.fillStyle = '#00f5d4';
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
     ctx.font = 'bold 36px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('Air Games Lab', this.width / 2, this.height * 0.25);
@@ -351,7 +351,7 @@ export class AirGamesLab {
     if (ball.y - ball.radius <= 0 || ball.y + ball.radius >= this.height) {
       ball.vy = -ball.vy;
       gameAudio.playPaddleHit(220);
-      this._spawnParticles(ball.x, ball.y, '#00f5d4', 6);
+      this._spawnParticles(ball.x, ball.y, 'rgba(255,255,255,0.85)', 6);
     }
 
     // Left Paddle Bounce
@@ -365,7 +365,7 @@ export class AirGamesLab {
         ball.vx = Math.abs(ball.speed);
         this.pong.rallyStreak++;
         gameAudio.playPaddleHit(520);
-        this._spawnParticles(ball.x, ball.y, '#ff007f', 12);
+        this._spawnParticles(ball.x, ball.y, 'rgba(255,255,255,0.6)', 12);
       }
     }
 
@@ -379,7 +379,7 @@ export class AirGamesLab {
         ball.vx = -Math.abs(ball.speed);
         this.pong.rallyStreak++;
         gameAudio.playPaddleHit(580);
-        this._spawnParticles(ball.x, ball.y, '#00f5d4', 12);
+        this._spawnParticles(ball.x, ball.y, 'rgba(255,255,255,0.85)', 12);
       }
     }
 
@@ -424,24 +424,21 @@ export class AirGamesLab {
     }
 
     // Left Paddle (Pure White)
-    this.ctx.fillStyle = '#ff007f';
-    this.ctx.shadowColor = '#ff007f';
-    this.ctx.shadowBlur = 0;
+    this.ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    this.ctx.shadowColor = 'rgba(255,255,255,0.6)';
     this.ctx.fillRect(lPaddleX, lp.y - lp.height / 2, lp.width, lp.height);
 
     // Right Paddle (Pure White)
-    this.ctx.fillStyle = '#00f5d4';
-    this.ctx.shadowColor = '#00f5d4';
+    this.ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    this.ctx.shadowColor = 'rgba(255,255,255,0.85)';
     this.ctx.fillRect(rPaddleX, rp.y - rp.height / 2, rp.width, rp.height);
 
     // Ball
     this.ctx.fillStyle = '#ffffff';
-    this.ctx.shadowColor = '#00f5d4';
-    this.ctx.shadowBlur = 0;
+    this.ctx.shadowColor = 'rgba(255,255,255,0.85)';
     this.ctx.beginPath();
     this.ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
     this.ctx.fill();
-    this.ctx.shadowBlur = 0;
   }
 
   _resetPongBall(direction) {
@@ -501,7 +498,6 @@ export class AirGamesLab {
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
         this.ctx.shadowColor = f.color;
-        this.ctx.shadowBlur = 14;
         this.ctx.fillText(f.emoji, f.x, f.y);
         this.ctx.restore();
 
@@ -518,7 +514,7 @@ export class AirGamesLab {
 
     // --- DRAW HUD ---
     this.ctx.font = 'bold 28px "Space Grotesk", sans-serif';
-    this.ctx.fillStyle = '#00f5d4';
+    this.ctx.fillStyle = 'rgba(255,255,255,0.85)';
     this.ctx.textAlign = 'left';
     this.ctx.fillText(`SCORE: ${fn.score}`, 30, 48);
 
@@ -535,7 +531,7 @@ export class AirGamesLab {
       this.ctx.fillRect(0, 0, this.width, this.height);
 
       this.ctx.font = 'bold 48px "Space Grotesk", sans-serif';
-      this.ctx.fillStyle = '#ff007f';
+      this.ctx.fillStyle = 'rgba(255,255,255,0.6)';
       this.ctx.textAlign = 'center';
       this.ctx.fillText('GAME OVER', this.width / 2, this.height / 2 - 20);
 
@@ -678,7 +674,7 @@ export class AirGamesLab {
           bb.streak++;
           gameAudio.playSwish();
           gameAudio.playScore();
-          this._spawnParticles(hoop.x, hoop.rimY + 20, '#00f5d4', 28);
+          this._spawnParticles(hoop.x, hoop.rimY + 20, 'rgba(255,255,255,0.85)', 28);
           this._spawnComboText(hoop.x, hoop.rimY - 30, bb.streak > 1 ? `🔥 SWISH x${bb.streak}!` : 'BASKET!');
         }
       }
@@ -693,7 +689,7 @@ export class AirGamesLab {
     // Court Floor
     this.ctx.fillStyle = '#0a101f';
     this.ctx.fillRect(0, this.height - 20, this.width, 20);
-    this.ctx.strokeStyle = '#00f5d4';
+    this.ctx.strokeStyle = 'rgba(255,255,255,0.85)';
     this.ctx.lineWidth = 2;
     this.ctx.beginPath();
     this.ctx.moveTo(0, this.height - 20);
@@ -728,12 +724,10 @@ export class AirGamesLab {
     // Basketball
     this.ctx.fillStyle = '#ff6b35';
     this.ctx.shadowColor = '#ff6b35';
-    this.ctx.shadowBlur = b.isHeld ? 20 : 10;
+    this.ctx.shadowBlur = 0;
     this.ctx.beginPath();
     this.ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
     this.ctx.fill();
-    this.ctx.shadowBlur = 0;
-
     // Ball stripes
     this.ctx.strokeStyle = '#1e293b';
     this.ctx.lineWidth = 2;
@@ -940,9 +934,9 @@ export class AirGamesLab {
     checkPaddle(h.paddleL); checkPaddle(h.paddleR);
 
     // draw paddles
-    ctx.fillStyle = '#00f5d4';
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
     ctx.fillRect(h.paddleL.x, h.paddleL.y - paddleH/2, paddleW, paddleH);
-    ctx.fillStyle = '#ff007f';
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.fillRect(h.paddleR.x, h.paddleR.y - paddleH/2, paddleW, paddleH);
 
     // puck
@@ -996,7 +990,7 @@ export class AirGamesLab {
     for (const [side, trail] of Object.entries(this.handTrails)) {
       if (trail.length < 2) continue;
 
-      const color = side === 'left' ? '#ff007f' : '#00f5d4';
+      const color = side === 'left' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.85)';
       this.ctx.save();
       this.ctx.strokeStyle = color;
       this.ctx.lineCap = 'round';
@@ -1042,7 +1036,7 @@ export class AirGamesLab {
         continue;
       }
 
-      const color = side === 'left' ? '#ff007f' : '#00f5d4';
+      const color = side === 'left' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.85)';
       this.ctx.save();
 
       // Outer reticle circle

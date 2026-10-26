@@ -103,7 +103,7 @@ export class Air3DStudio {
     // 1. Holographic Floor Ring / Pedestal
     const ringGeo = new THREE.RingGeometry(1.2, 1.25, 64);
     const ringMat = new THREE.MeshBasicMaterial({
-      color: 0x00f5d4,
+      color: 0xffffff,
       side: THREE.DoubleSide,
       transparent: true,
       opacity: 0.5
@@ -140,7 +140,7 @@ export class Air3DStudio {
     rayGeo.translate(0, 0.5, 0);
     rayGeo.rotateX(Math.PI / 2);
     this.rayMat = new THREE.MeshBasicMaterial({
-      color: 0x00f5d4,
+      color: 0xffffff,
       transparent: true,
       opacity: 0.65
     });
@@ -151,7 +151,7 @@ export class Air3DStudio {
     // Holographic Contact Reticle (target circle on model intersection)
     const reticleGeo = new THREE.RingGeometry(0.035, 0.045, 32);
     this.reticleMat = new THREE.MeshBasicMaterial({
-      color: 0x00f5d4,
+      color: 0xffffff,
       side: THREE.DoubleSide,
       transparent: true,
       opacity: 0.85
@@ -224,8 +224,8 @@ export class Air3DStudio {
     // Inner Luminous Palladium Core
     const coreGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.1, 32);
     const coreMat = new THREE.MeshStandardMaterial({
-      color: 0x00f5d4,
-      emissive: 0x00f5d4,
+      color: 0xffffff,
+      emissive: 0xffffff,
       emissiveIntensity: 0.6,
       roughness: 0.2,
       metalness: 0.8
@@ -274,7 +274,7 @@ export class Air3DStudio {
       const angle = (i / 16) * Math.PI * 2;
       const bladeGeo = new THREE.BoxGeometry(0.08, 0.6, 0.02);
       bladeGeo.translate(0, 0.35, 0);
-      const bladeMat = this._createMaterial(0x00f5d4, 0.9, 0.2);
+      const bladeMat = this._createMaterial(0xffffff, 0.9, 0.2);
       const blade = new THREE.Mesh(bladeGeo, bladeMat);
       blade.rotation.z = angle;
       blade.rotation.y = 0.45; // Aerodynamic pitch angle
@@ -311,7 +311,7 @@ export class Air3DStudio {
     // Upper Forearm Link
     const link2Geo = new THREE.BoxGeometry(0.16, 0.7, 0.16);
     link2Geo.translate(0, 0.35, 0);
-    const link2Mat = this._createMaterial(0x00f5d4, 0.8, 0.3);
+    const link2Mat = this._createMaterial(0xffffff, 0.8, 0.3);
     const link2 = new THREE.Mesh(link2Geo, link2Mat);
     link2.position.set(-0.25, 0.15, 0);
     link2.rotation.z = 0.6;
@@ -322,7 +322,7 @@ export class Air3DStudio {
   }
 
   // --- MATERIAL FACTORY (SHADING MODES) ---
-  _createMaterial(baseColorHex = 0x00f5d4, metalness = 0.8, roughness = 0.25) {
+  _createMaterial(baseColorHex = 0xffffff, metalness = 0.8, roughness = 0.25) {
     if (this.shadingMode === 'hologram') {
       return new THREE.MeshStandardMaterial({
         color: baseColorHex,
@@ -342,7 +342,7 @@ export class Air3DStudio {
       });
     } else if (this.shadingMode === 'xray') {
       return new THREE.MeshPhysicalMaterial({
-        color: 0x00f5d4,
+        color: 0xffffff,
         transparent: true,
         opacity: 0.35,
         transmission: 0.7,
@@ -351,7 +351,7 @@ export class Air3DStudio {
       });
     } else { // wireframe
       return new THREE.MeshBasicMaterial({
-        color: 0x00f5d4,
+        color: 0xffffff,
         wireframe: true
       });
     }
@@ -361,7 +361,7 @@ export class Air3DStudio {
     this.shadingMode = mode;
     this.modelContainer.traverse((child) => {
       if (child.isMesh) {
-        const baseColor = child.material.color ? child.material.color.getHex() : 0x00f5d4;
+        const baseColor = child.material.color ? child.material.color.getHex() : 0xffffff;
         child.material = this._createMaterial(baseColor);
       }
     });
@@ -455,7 +455,7 @@ export class Air3DStudio {
     const geometry = loader.parse(arrayBuffer);
     geometry.computeVertexNormals();
 
-    const material = this._createMaterial(0x00f5d4, 0.85, 0.2);
+    const material = this._createMaterial(0xffffff, 0.85, 0.2);
     const mesh = new THREE.Mesh(geometry, material);
 
     this.modelMetadata.name = fileName;

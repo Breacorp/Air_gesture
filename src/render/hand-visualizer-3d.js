@@ -57,7 +57,7 @@ export class HandVisualizer3D {
   }
 
   _setupSpatialGrid() {
-    const grid = new THREE.GridHelper(6, 20, 0x00f5d4, 0x1f293d);
+    const grid = new THREE.GridHelper(6, 20, 0xffffff, 0x1f293d);
     grid.position.y = -1.6;
     grid.material.opacity = 0.25;
     grid.material.transparent = true;
@@ -183,7 +183,7 @@ export class HandVisualizer3D {
     // 5. 3D Contour Silhouette Line
     const contourGeo = new THREE.BufferGeometry();
     const contourMat = new THREE.LineBasicMaterial({
-      color: 0x00f5d4,
+      color: 0xffffff,
       transparent: true,
       opacity: 0.85
     });
@@ -259,7 +259,7 @@ export class HandVisualizer3D {
       ctx.fillStyle = '#ffd166';
       ctx.fillText(`OCCLUDED (${occlusionPct}%)`, w - 170, 34);
     } else {
-      ctx.fillStyle = '#00f5d4';
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
       ctx.fillText(`ACTIVE ${confPct}%`, w - 140, 34);
     }
 

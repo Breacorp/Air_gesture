@@ -152,7 +152,7 @@ export class SpatialDirectTouch {
     ripple.className = 'click-ripple';
     ripple.style.left = `${x}px`;
     ripple.style.top = `${y}px`;
-    ripple.style.borderColor = '#00f5d4';
+    ripple.style.borderColor = 'rgba(255,255,255,0.85)';
     document.body.appendChild(ripple);
 
     setTimeout(() => {

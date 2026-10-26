@@ -277,7 +277,7 @@ export class FullSensorView {
   }
 
   _renderSensorFrame(ctx, vr) {
-    // Outer Sensor Border (Cyber Cyan)
+    // Outer Sensor Border (Moderno Cyan)
     ctx.save();
     ctx.strokeStyle = 'rgba(120, 200, 255, 0.55)';
     ctx.lineWidth = 1;
@@ -487,7 +487,7 @@ export class FullSensorView {
         const vx = obj.velocity.vx * this.videoRect.width * 0.4;
         const vy = obj.velocity.vy * this.videoRect.height * 0.4;
 
-        ctx.strokeStyle = '#00f5d4';
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(center.x, center.y);
@@ -554,7 +554,7 @@ export class FullSensorView {
     ctx.stroke();
 
     // Header: AIR GESTURE — PERCEPTION DEBUG
-    ctx.fillStyle = '#00f5d4';
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
     ctx.font = 'bold 12px "JetBrains Mono", monospace';
     ctx.textAlign = 'left';
     ctx.fillText('AIR GESTURE — PERCEPTION DEBUG', boxX + 16, boxY + 24);
@@ -602,7 +602,7 @@ export class FullSensorView {
 
     // Left Hand
     if (leftHand) {
-      ctx.fillStyle = '#00f5d4';
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
       const conf = Math.round((leftHand.confidence || 0.9) * 100);
       const pos = leftHand.landmarks ? `(${leftHand.landmarks[0].x.toFixed(2)}, ${leftHand.landmarks[0].y.toFixed(2)})` : '';
       ctx.fillText(`Left:  DETECTED  conf: ${conf}% ${pos}`, boxX + 16, curY);
@@ -614,7 +614,7 @@ export class FullSensorView {
 
     // Right Hand
     if (rightHand) {
-      ctx.fillStyle = '#00f5d4';
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
       const conf = Math.round((rightHand.confidence || 0.9) * 100);
       const pos = rightHand.landmarks ? `(${rightHand.landmarks[0].x.toFixed(2)}, ${rightHand.landmarks[0].y.toFixed(2)})` : '';
       ctx.fillText(`Right: DETECTED  conf: ${conf}% ${pos}`, boxX + 16, curY);
@@ -684,7 +684,7 @@ export class FullSensorView {
     curY += lineSpacing;
 
     const totalEntities = data.worldModel?.getAllActiveEntities ? data.worldModel.getAllActiveEntities().length : 0;
-    ctx.fillStyle = totalEntities > 0 ? '#00f5d4' : '#ffffff';
+    ctx.fillStyle = totalEntities > 0 ? 'rgba(255,255,255,0.85)' : '#ffffff';
     ctx.fillText(`Entities: ${totalEntities} active in 3D scene`, boxX + 16, curY);
 
     ctx.restore();

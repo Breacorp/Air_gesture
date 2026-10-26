@@ -9,7 +9,7 @@
   --accent-cyan: rgba(255, 255, 255, 0.8);
   --accent-blue: #00bbf9;
   --accent-purple: #a100ff;
-  --accent-magenta: #ff007f;
+  --accent-magenta: rgba(255,255,255,0.6);
   --accent-yellow: #ffd166;
   --accent-emerald: #10b981;
 
@@ -771,7 +771,7 @@ body.mode-compact .profile-nav-bar {
 }
 
 .meter-fill-purple {
-  background: linear-gradient(90deg, #7928ca, #ff007f);
+  background: linear-gradient(90deg, #7928ca, rgba(255,255,255,0.6));
   box-shadow: 0 0 8px rgba(255, 0, 127, 0.4);
 }
 
@@ -893,8 +893,8 @@ body.mode-compact .profile-nav-bar {
 
 #hand-card-left .badge-pose-active {
   background: rgba(255, 0, 127, 0.2);
-  color: #ff007f;
-  border-color: #ff007f;
+  color: rgba(255,255,255,0.6);
+  border-color: rgba(255,255,255,0.6);
   box-shadow: 0 0 10px rgba(255, 0, 127, 0.3);
 }
 
@@ -1532,7 +1532,7 @@ body.mode-compact .profile-nav-bar {
 }
 
 .btn-physics.active {
-  background: linear-gradient(135deg, #ff007f, #a100ff);
+  background: linear-gradient(135deg, rgba(255,255,255,0.6), #a100ff);
   color: #ffffff;
   font-weight: 700;
   box-shadow: 0 0 30px rgba(255, 0, 127, 0.65);

@@ -319,7 +319,7 @@ export class TelemetryHUD {
 
     if (countBadge) {
       countBadge.textContent = `Objects: ${objects.length}`;
-      countBadge.style.color = objects.length > 0 ? '#00f5d4' : '#ff9e79';
+      countBadge.style.color = objects.length > 0 ? 'rgba(255,255,255,0.85)' : '#ff9e79';
     }
 
     if (statusObj) {
@@ -342,8 +342,8 @@ export class TelemetryHUD {
       const trackBadge = document.getElementById('obj-perception-track-badge');
       if (trackBadge) {
         trackBadge.textContent = `Tracking: ${trackStatus}`;
-        trackBadge.style.color = trackStatus === 'OCCLUDED' ? '#ffd166' : (trackStatus === 'ACTIVE' ? '#00f5d4' : '#94a3b8');
-        trackBadge.style.borderColor = trackStatus === 'OCCLUDED' ? '#ffd16666' : '#00f5d466';
+        trackBadge.style.color = trackStatus === 'OCCLUDED' ? '#ffd166' : (trackStatus === 'ACTIVE' ? 'rgba(255,255,255,0.85)' : '#94a3b8');
+        trackBadge.style.borderColor = trackStatus === 'OCCLUDED' ? '#ffd16666' : 'rgba(255,255,255,0.85)66';
       }
 
       setTxt('obj-confidence', `${Math.round((obj.confidence || 0.85) * 100)}%`);
@@ -380,7 +380,7 @@ export class TelemetryHUD {
       const summaries = worldModel.getRelationsSummary ? worldModel.getRelationsSummary() : [];
       if (summaries && summaries.length > 0) {
         relationsChip.innerHTML = summaries.map(rel => {
-          let badgeColor = '#00f5d4';
+          let badgeColor = 'rgba(255,255,255,0.85)';
           if (rel.includes('SOSTIENE') || rel.includes('LANZADO')) badgeColor = '#ffd166';
           if (rel.includes('CRUZADOS') || rel.includes('ELEVADOS')) badgeColor = '#a100ff';
           return `<span style="background:${badgeColor}22; border:1px solid ${badgeColor}66; color:${badgeColor}; border-radius:4px; padding:1px 6px; font-weight:600;">${rel}</span>`;
