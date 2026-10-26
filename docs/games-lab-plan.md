@@ -1,41 +1,61 @@
-# Air Games Lab — Plan de menú inicial y expansión (+10 juegos)
+# Air Games Lab — Plan de Rediseño Premium (Moderno Tech Identity)
 
 ## Objetivo
-Mostrar un menú de selección al entrar a Air Games Lab, en vez de auto-iniciar Air Pong. Incluir al menos 10 juegos gestuales.
+Transformar Air Games Lab en una plataforma de entretenimiento por movimiento de alta calidad, con menú inicial, al menos 10 juegos pulidos, efectos visuales elegantes y sonido procedural premium. Sin rastros de estilo cyberpunk/neón; toda la identidad visual debe seguir el estilo de moderno.com.ar (minimalismo, lujo, elegancia, blanco/plata/azul profundo).
 
-## Arquitectura propuesta
-- `AirGamesLab` pasa a estado `MENU` por defecto.
-- Nuevo módulo `games/game-menu.js` con grilla de tarjetas (icono, nombre, descripción, dificultad).
-- Selección por gesto pinch o pointer; teclado fallback.
-- Cada juego implementa interfaz `{ id, name, start, update, stop, dispose }`.
-- `AirGamesLab` orquesta spawn/clean del juego activo.
+## Principios de Diseño
+- **Identidad Visual**: Fondos oscuros sofisticados, acentos blancos/plata, superficies glassmorphism, sombras suaves. Cero neones.
+- **Audio**: Sintetizador procedural (Web Audio API) con sonidos modernos (bases, pops, chimes). Sin archivos externos.
+- **Mecánicas**: Cada juego debe tener una mecánica distintiva (golpear, esquivar, atrapar, apuntar, etc.), controles intuitivos y feedback inmediato.
+- **Adictividad**: Rondas cortas, puntuación clara, récords persistentes, dificultad progresiva.
 
-## Juegos (10+)
-1. Air Pong (existente)
-2. Bubble Pop — pinch para explotar burbujas
-3. Target Shooter — fijar mano y disparar a dianas
-4. Simon Says — secuencia de gestos
-5. Rhythm Clap — seguir ritmo
-6. Obstacle Runner — evitar obstáculos moviendo mano
-7. Gravity Wells — atraer/repeler objetos
-8. Hand Tennis — saques y voleas
-9. Color Match — emparejar por color
-10. Maze Trace — seguir camino con dedo
-11. UFO Defense — destruir naves
-12. Finger Draw Race — dibujar forma más rápido
+## Arquitectura
+- `AirGamesLab` gestiona estados: `MENU`, `PLAYING`, `PAUSED`, `GAMEOVER`.
+- Cada juego implementa interfaz: `{ id, name, start, update, stop, dispose }`.
+- `GameMenu` (nuevo módulo) renderiza tarjetas elegantes con icono, nombre, descripción y dificultad.
+- Selección por gesto pinch o pointer; fallback teclado.
+- Persistencia de high scores en `localStorage`.
+
+## Los 10+ Juegos (Mecánicas Distintas)
+1. **Air Pong** (existente) — Movimiento continuo, dos palas.
+2. **Bubble Blaster** — Pellizco para reventar burbujas, apuntado.
+3. **Air Hockey** — Mesa horizontal, empuje 2D, porterías.
+4. **Air Archery** — Apuntar con una mano, tensar con la otra, disparo por separación.
+5. **Air Boxing** — Golpes rápidos, esquivas laterales, contraataque.
+6. **Air Basketball** — Agarrar y lanzar con física, enceste.
+7. **Sword Duel** — Ataques direccionales, bloqueo defensivo.
+8. **Motion Racer** — Volante con dos manos, turbo por gesto.
+9. **Pop Attack** — Reacción rápida, tocar objetivos antes de desaparecer.
+10. **Gravity Lab** — Agarrar, mover y rotar objetos 3D para resolver puzzles.
+11. **Space Defender** — Mover nave, disparar pinch, habilidad defensiva.
+12. **Color Match** — Emparejar por color con pinch.
+
+## Efectos Visuales Premium
+- **Sombras Suaves**: Sombras proyectadas que siguen al objeto (depth).
+- **Glassmorphism**: Superficies semitransparentes con blur para UI y paneles.
+- **Partículas Elegantes**: Explosiones suaves, rastros de movimiento (trails) con desvanecimiento.
+- **Transiciones Orgánicas**: Ease-in-out para aparición/desaparición de elementos.
+- **Rejilla Animada**: Fondo sutil con líneas finas.
+
+## Audio Procedural Premium
+- **Pops/Clicks**: Sweeps de frecuencia corta y limpia.
+- **Impactos**: Ruido blanco filtrado con decay rápido.
+- **Chimes**: Acorde ascendente suave para goles/logros.
+- **Ambiente**: Ruido de fondo muy sutil (opcional).
 
 ## Integración UI
 - Overlay full-screen `games-menu` dentro del lab.
 - Botón "Salir al menú" en cada juego.
-- Estado `idle` -> muestra menú, `playing`, `paused`, `gameover`.
-- Persistencia de high score en localStorage.
+- Estados: `idle` → menú, `playing`, `paused`, `gameover`.
+- Persistencia de high score en `localStorage`.
 
 ## Validación
 - Tests `test/test-air-games-menu.js`.
 - Build + check.
+- Auditoría visual: cero neones, estilo Moderno Tech.
 
-## Fases
-1. Skeleton menu + estado (1 PR)
-2. Portar Air Pong a nuevo contrato (1 PR)
-3. Agregar 2-3 juegos por PR
-4. Pulido visual y sonido
+## Fases de Implementación
+1. **Skeleton menu + estado** (1 PR) — Menú funcional con tarjetas clickeables.
+2. **Portar juegos existentes** (1 PR) — Air Pong, Fruit Ninja, Basketball, Bubble Blaster, Air Hockey adaptados al nuevo contrato.
+3. **Agregar 2-3 juegos por PR** — Empezar por Archery, Boxing, Basketball.
+4. **Pulido visual y sonido** — Glassmorphism, sombras, audio premium, high scores.
