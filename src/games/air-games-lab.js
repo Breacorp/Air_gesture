@@ -97,6 +97,9 @@ export class AirGamesLab {
       paddleR: { x: 740, y: 250 }
     };
 
+    this.popAttack = { score: 0, targets: [], lastSpawn: performance.now(), lives: 3, gameOver: false };
+    this.archery = { score: 0, targets: [], lastSpawn: performance.now(), arrows: [] };
+
     
     // Visual FX State
     this.fx = {
@@ -250,7 +253,7 @@ export class AirGamesLab {
     ctx.fillStyle = '#cbd5e1';
     ctx.font = '16px sans-serif';
     ctx.fillText('Seleccioná un juego usando las pestañas de arriba', this.width / 2, this.height * 0.35);
-    const games = ['pong', 'fruit_ninja', 'basketball', 'bubble_blaster', 'air_hockey'];
+    const games = ['pong', 'fruit_ninja', 'basketball', 'bubble_blaster', 'air_hockey', 'pop_attack', 'archery'];
     games.forEach((g, i) => {
       const x = this.width / 2;
       const y = this.height * 0.45 + i * 50;
@@ -293,6 +296,10 @@ export class AirGamesLab {
       this.airHockey.ball.y = this.height / 2;
       this.airHockey.ball.vx = 4 * (Math.random() > 0.5 ? 1 : -1);
       this.airHockey.ball.vy = 3;
+    } else if (this.activeGame === 'pop_attack') {
+      this.popAttack.score = 0; this.popAttack.targets = []; this.popAttack.lastSpawn = now; this.popAttack.lives = 3; this.popAttack.gameOver = false;
+    } else if (this.activeGame === 'archery') {
+      this.archery.score = 0; this.archery.targets = []; this.archery.arrows = []; this.archery.lastSpawn = now;
     }
   }
 
@@ -318,6 +325,10 @@ export class AirGamesLab {
         this._updateAndRenderBubbleBlaster(now);
       } else if (this.activeGame === 'air_hockey') {
         this._updateAndRenderAirHockey(now);
+      } else if (this.activeGame === 'pop_attack') {
+        this._updateAndRenderPopAttack(now);
+      } else if (this.activeGame === 'archery') {
+        this._updateAndRenderArchery(now);
       }
 
       this._renderParticles();
@@ -954,6 +965,105 @@ export class AirGamesLab {
     ctx.fillText(`${h.scoreL}  -  ${h.scoreR}`, this.width/2, 50);
     ctx.font = '14px sans-serif';
     ctx.fillText('Objetivo: pasar el disco por el arco del rival (centro)', this.width/2, this.height-12);
+  }
+
+
+  _updateAndRenderPopAttack(now) {
+    const ctx = this.ctx; const g = this.popAttack;
+    ctx.fillStyle = '#0b0b10'; ctx.fillRect(0,0,this.width,this.height);
+    // spawn
+    if (!g.gameOver && now - g.lastSpawn > 1000) {
+      g.lastSpawn = now;
+      const bad = Math.random() < 0.25;
+      g.targets.push({ x: 40 + Math.random()*(this.width-80), y: 40 + Math.random()*(this.height-80), r: 26, bad, born: now, ttl: 2200 });
+    }
+    // expire
+    g.targets = g.targets.filter(t => {
+      if (now - t.born > t.ttl) { if (!t.bad) { g.lives--; if (g.lives<=0) g.gameOver=true; } return false; }
+      return true;
+    });
+    // pop by pinch cursors
+    const cursors = Object.values(this.handCursors||{}).filter(c=>c.active);
+    g.targets.forEach(t => {
+      cursors.forEach(c => {
+        if (c.pinching && Math.hypot(c.x-t.x,c.y-t.y) < t.r+8) {
+          t.popped = true;
+          if (t.bad) { g.lives--; if (g.lives<=0) g.gameOver=true; }
+          else { g.score += 10; }
+        }
+      });
+    });
+    g.targets = g.targets.filter(t => !t.popped);
+    // draw
+    g.targets.forEach(t => {
+      ctx.beginPath(); ctx.arc(t.x,t.y,t.r,0,Math.PI*2);
+      ctx.fillStyle = t.bad ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.8)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.stroke();
+    });
+    // HUD
+    ctx.fillStyle='#fff'; ctx.font='bold 24px sans-serif'; ctx.textAlign='left';
+    ctx.fillText(`Score: ${g.score}`, 20, 40);
+    ctx.fillText(`Vidas: ${g.lives}`, 20, 70);
+    if (g.gameOver) {
+      ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(0,0,this.width,this.height);
+      ctx.fillStyle='#fff'; ctx.font='bold 40px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('GAME OVER', this.width/2, this.height/2);
+    }
+  }
+
+  _updateAndRenderArchery(now) {
+    const ctx = this.ctx; const g = this.archery;
+    ctx.fillStyle='#0b0b10'; ctx.fillRect(0,0,this.width,this.height);
+    // spawn targets
+    if (now - g.lastSpawn > 1800) {
+      g.lastSpawn = now;
+      g.targets.push({ x: 60+Math.random()*(this.width-120), y: 60+Math.random()*(this.height*0.5), r: 22, born: now });
+    }
+    g.targets = g.targets.filter(t => now - t.born < 4000);
+    // aim with left hand
+    const lc = this.handCursors.left;
+    const aimX = lc && lc.active ? lc.x : this.width/2;
+    const aimY = lc && lc.active ? lc.y : this.height/2;
+    // shoot on pinch
+    const cursors = Object.values(this.handCursors||{}).filter(c=>c.active);
+    cursors.forEach(c => {
+      if (c.pinching && !g._shotLock) {
+        g._shotLock = true;
+        g.arrows.push({ x: this.width/2, y: this.height-20, vx: (aimX-this.width/2)*0.08, vy: (aimY-(this.height-20))*0.08, life: 60 });
+      }
+    });
+    if (!cursors.some(c=>c.pinching)) g._shotLock = false;
+    // update arrows
+    g.arrows.forEach(a => { a.x += a.vx; a.y += a.vy; a.life--; });
+    g.arrows = g.arrows.filter(a => a.life > 0 && a.x>0 && a.x<this.width && a.y>0 && a.y<this.height);
+    // collisions
+    g.arrows.forEach(a => {
+      g.targets.forEach(t => {
+        if (Math.hypot(a.x-t.x, a.y-t.y) < t.r+4) {
+          t.hit = true; g.score += 20; a.life = 0;
+        }
+      });
+    });
+    g.targets = g.targets.filter(t => !t.hit);
+    // draw targets
+    g.targets.forEach(t => {
+      ctx.beginPath(); ctx.arc(t.x,t.y,t.r,0,Math.PI*2);
+      ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=3; ctx.stroke();
+      ctx.beginPath(); ctx.arc(t.x,t.y,t.r*0.5,0,Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(t.x,t.y,4,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.fill();
+    });
+    // draw arrows
+    g.arrows.forEach(a => {
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(a.x-a.vx*3, a.y-a.vy*3);
+      ctx.strokeStyle='rgba(255,255,255,0.9)'; ctx.lineWidth=2; ctx.stroke();
+    });
+    // aim reticle
+    ctx.beginPath(); ctx.arc(aimX,aimY,18,0,Math.PI*2); ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(aimX-10,aimY); ctx.lineTo(aimX+10,aimY); ctx.moveTo(aimX,aimY-10); ctx.lineTo(aimX,aimY+10); ctx.stroke();
+    // HUD
+    ctx.fillStyle='#fff'; ctx.font='bold 24px sans-serif'; ctx.textAlign='left';
+    ctx.fillText(`Score: ${g.score}`, 20, 40);
   }
 
   _renderParticles() {

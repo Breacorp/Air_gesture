@@ -1282,7 +1282,9 @@ const gameGuides = {
   fruit_ninja: '🍉 Fruit Ninja: Mueve tu mano a alta velocidad para cortar frutas con el filo espacial • ¡Evita las bombas!',
   basketball: '🏀 Air Basketball: Acerca la mano a la pelota y pellizca (🤏) para agarrar • Lanza hacia el aro',
   bubble_blaster: '🫧 Bubble Blaster: Mueve el cursor y pellizca (🤏) sobre las burbujas para reventarlas',
-  air_hockey: '🏒 Air Hockey: Mano izquierda paleta izquierda, mano derecha paleta derecha; evita goles'
+  air_hockey: '🏒 Air Hockey: Mano izquierda paleta izquierda, mano derecha paleta derecha; evita goles',
+  pop_attack: '🎯 Pop Attack: Tocá los objetivos antes de que desaparezcan; evitá los rojos',
+  archery: '🏹 Air Archery: Apuntá con la mano y pellizcá para disparar'
 };
 
 let currentGamesSelection = null;
